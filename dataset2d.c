@@ -21,6 +21,7 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	ds->recipientCollection = 1;
 	numStages = ds->numSegSites + ds->numSamples;
 	ds->thetas = thetas;
+	ds->numThetas = numThetas;
 	ds->migRates[0] = migRates[0];
 	ds->migRates[1] = migRates[1];
 	ds->collection[0] = (SuperCollection *)malloc(sizeof(SuperCollection));
@@ -45,15 +46,15 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	configLength = ds->nodeList.numNodes;
 	NodeList_get_num_children(&(ds->nodeList));
 	NodeList_get_idxToNode(&(ds->nodeList));
-	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren, numThetas);
+	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_get_ref_config(&(ds->bmat2d->bmat), &(ds->refConfig));
 	DatConfig2d_init(&(ds->refConfig2d), configLength, &(ds->refConfig), (SuperConfig *)NULL); 
 	DatConfig2d_get_ref_datconfig2d(ds->bmat2d, &(ds->refConfig2d));
 	DatConfig rootPanmictic;
-	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren, numThetas);
+	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_set_root_config(&rootPanmictic);
-	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren);
-	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren);
+	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren, ds->numThetas);
+	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren, ds->numThetas);
 	SuperCollection_add_SuperConfig(ds->collection[0], &rootPanmictic, ds);
 	ds->collection[0]->superConfigs[0]->configs2d[0]->prob = 1.0;
 	ds->collection[0]->superConfigs[0]->configs2d[1]->prob = 1.0;

@@ -85,10 +85,10 @@ typedef struct superconfig_
 	struct superconfig_ * next;
 } SuperConfig;
 */
-void SuperConfig_init_static(SuperConfig * super, int32_t * numChildren, int32_t configLength)
+void SuperConfig_init_static(SuperConfig * super, int32_t * numChildren, int32_t configLength, int32_t numThetas)
 {
 	super->configLength = configLength;
-	DatConfig_init(&(super->panmictic), configLength, numChildren);
+	DatConfig_init(&(super->panmictic), configLength, numChildren, numThetas);
 	super->positionMultipliers = (int32_t *)calloc(configLength, sizeof(int32_t));
 	CHECKPOINTER(super->positionMultipliers);
 	return;
@@ -566,7 +566,7 @@ uint32_t HashSuper_get_hash_idx(int32_t * positions, int32_t length)
 /* SuperCollection functions */
 ///////////////////////////////
 
-void SuperCollection_init(SuperCollection * collection, int32_t configLength, int32_t * numChildren)
+void SuperCollection_init(SuperCollection * collection, int32_t configLength, int32_t * numChildren, int32_t numThetas)
 {
 	int32_t i;
 	collection->numChildren = numChildren;
@@ -579,7 +579,7 @@ void SuperCollection_init(SuperCollection * collection, int32_t configLength, in
 	{
 		collection->superConfigs[i] = (SuperConfig *)malloc(sizeof(SuperConfig));
 		CHECKPOINTER(collection->superConfigs[i]);
-		SuperConfig_init_static(collection->superConfigs[i], numChildren, configLength);
+		SuperConfig_init_static(collection->superConfigs[i], numChildren, configLength, numThetas);
 	}
 	HashSuper_init(&(collection->hashSuper), configLength);
 	return;
@@ -607,7 +607,7 @@ void SuperCollection_free(SuperCollection * collection)
 	return;
 }
 
-void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t numNewSuperConfigs)
+void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t numNewSuperConfigs, int32_t numThetas)
 {
 	int32_t i, newNumSuperConfigs = collection->maxNumSuperConfigs + numNewSuperConfigs;
 	collection->superConfigs = (SuperConfig **)realloc((void *)(collection->superConfigs), sizeof(SuperConfig *) * (size_t)newNumSuperConfigs);
@@ -617,16 +617,16 @@ void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t
 		collection->superConfigs[i] = (SuperConfig *)malloc(sizeof(SuperConfig));
 		CHECKPOINTER(collection->superConfigs);
 		// TODO: getting configLength from the first superConfigs is kind of sloppy.
-		SuperConfig_init_static(collection->superConfigs[i], collection->numChildren, collection->superConfigs[0]->configLength);
+		SuperConfig_init_static(collection->superConfigs[i], collection->numChildren, collection->superConfigs[0]->configLength, numThetas);
 	}
 	collection->maxNumSuperConfigs = newNumSuperConfigs;
 	return;
 }
 
-SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection)
+SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection, int32_t numThetas)
 {
 	if(collection->curNumSuperConfigs >= collection->maxNumSuperConfigs)
-		SuperCollection_add_SuperConfig_space(collection, DEFAULT_SUPER_COLLECTION_INCREASE);
+		SuperCollection_add_SuperConfig_space(collection, DEFAULT_SUPER_COLLECTION_INCREASE, numThetas);
 	SuperConfig * config = collection->superConfigs[collection->curNumSuperConfigs];
 	(collection->curNumSuperConfigs)++;
 	return config;
@@ -640,11 +640,13 @@ SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection)
 //void SuperCollection_add_SuperConfig(SuperCollection * collection, SuperConfig * cloneConfig)
 void SuperCollection_add_SuperConfig(SuperCollection * collection, DatConfig * panmictic, struct dataset2d_ * ds)
 {
+	// this may not work...
+	int32_t numThetas = panmictic->numProbs;
 	//SuperConfig ** insertionPoint;
 	// updated: now have to check whether it's in the collection already:
 	if(!HashSuper_check_in_table(panmictic->positions, &(collection->hashSuper)))		// TODO: check/rewrite function to check and get insertion point (or NULL) at same time (see below).
 	{
-		SuperConfig * config = SuperCollection_get_SuperConfig(collection);
+		SuperConfig * config = SuperCollection_get_SuperConfig(collection, numThetas);
 		SuperConfig_init(config, panmictic, ds);
 		HashSuper_insert_config(config, &(collection->hashSuper));
 	}

@@ -28,7 +28,9 @@ static struct option long_options[] =
 	{"input", required_argument, 0, 'i'},
 	{"numdemes", required_argument, 0, 'D'},
 	{"theta",  required_argument, 0, 't'},
-	{"migrates", required_argument, 0, 'M'},
+	{"migrate", required_argument, 0, 'M'},
+	{"theta-file", required_argument, 0, 1},
+	{"migration-file", required_argument, 0, 2},
 	{"output", required_argument, 0, 'o'},
 	{0, 0, 0, 0}
 };
@@ -80,6 +82,12 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 			case 'o':
 				strncpy(opt->filenameOut, optarg, sizeof(opt->filenameOut));
 				break;
+			case 1:
+				// deal with theta file
+				break;
+			case 2:
+				// deal with migration-rate file
+				break;
 			default:
 				abort();
 				break;
@@ -88,11 +96,21 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	// now read thetas
 	int32_t numThetas = argc - optind;
 	printf("numThetas = %i\n", numThetas);
-	double * thetas = (double *)malloc(sizeof(double) * numThetas);
+	double * thetas = (double *)calloc((size_t)numThetas, sizeof(double));
 	CHECKPOINTER(thetas);
-	for(i = (int32_t)optind; i < (int32_t)argc; i++)
+	opt->thetas = thetas;
+	opt->numThetas = numThetas;
+	int32_t thetaIdx = 0;
+	REPORTI(optind);
+	for(i = optind; i < argc; i++)
 	{
-		success = sscanf(argv[i], "%lf", &(opt->thetas[i]));
+		REPORTI(i);
+		printf("argv[%i]: %s\n", i, argv[i]);
+		opt->thetas[thetaIdx] = (double)atof(argv[i]);
+		REPORTI(thetaIdx);
+		REPORTF(opt->thetas[thetaIdx]);
+		//success = (int)sscanf(argv[i], "%lf", &(opt->thetas[thetaIdx]));
+		thetaIdx++;
 		if(!success)
 			PERROR("Failure to read thetas.");
 	}
@@ -195,7 +213,11 @@ void SolverOptions_run_program(SolverOptions * opt)
 	if(opt->numDemes == 2)
 		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->migRates);
 	else if(opt->numDemes == 1)
+	{
+		REPORTF(opt->thetas[0]);
+		REPORTF(opt->thetas[1]);
 		solve_D1(opt->fin, opt->numThetas, opt->thetas);
+	}
 	return;
 }
 

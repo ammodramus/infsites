@@ -25,7 +25,8 @@ void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren, int32
 	df->active = (int32_t *)calloc((size_t)length, sizeof(int32_t));
 	CHECKPOINTER(df->active);
 	df->numProbs = numProbs;
-	df->probs = (double *)malloc(sizeof(double) * numProbs);
+	df->probs = (double *)calloc(numProbs, sizeof(double));
+	CHECKPOINTER(df->probs);
 	return;
 }
 
@@ -126,10 +127,14 @@ void DatConfig_copy_dimensions(DatConfig * df, DatConfig * dfClone)
  * dimensions as df's (using DatConfig_copy_dimensions()) */
 void DatConfig_copy_config(DatConfig * df, DatConfig * dfClone)
 {
-	int32_t i,j;
+	int32_t i,j,k;
 	dfClone->length = df->length;
 	dfClone->numChildren = df->numChildren;
 	dfClone->prob = df->prob;
+	dfClone->numProbs = df->numProbs;
+	// may not work, don't know whether dfClone->probs has been allocated
+	for(k = 0; k < df->numProbs; k++)
+		dfClone->probs[k] = df->probs[k];
 	for(i = 0; i < df->length; i++)
 	{
 		dfClone->positions[i] = df->positions[i];
@@ -301,6 +306,7 @@ DatConfig * ConfigCollection_get_empty_config(ConfigCollection * cc)
 
 void ConfigCollection_add_config(ConfigCollection * cc, DatConfig * config)
 {
+	int32_t k;
 	DatConfig * hashConfig;
 	DatConfig * cloneConfig;
 	// look for config
@@ -317,6 +323,8 @@ void ConfigCollection_add_config(ConfigCollection * cc, DatConfig * config)
 	{
 		//fprintf(stdout, "(adding prob...) \"old prob\" = %f, config->prob = %f\n", hashConfig->prob, config->prob);
 		//DatConfig_print(hashConfig, stdout, 1);
+		for(k = 0; k < config->numProbs; k++)
+			hashConfig->probs[k] += config->probs[k];
 		hashConfig->prob += config->prob;
 	}
 	return;
