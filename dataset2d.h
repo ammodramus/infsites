@@ -25,11 +25,12 @@ typedef struct dataset2d_
 	struct supercollection_ * collection[2];
 	double migRates[2];
 	double theta;
+	int32_t numThetas;
+	double * thetas;
 } DataSet2d;
 
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, double theta, double * migRates);
-void DataSet2d_init_print(DataSet2d * ds, BMat2d * inputbmat, double theta, double * migRates);
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, double * migRates);
 void DataSet2d_free(DataSet2d * ds);
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_solve_equations(SuperCollection * collection);

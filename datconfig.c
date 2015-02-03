@@ -8,7 +8,7 @@
 #include "dataset.h"
 #include "hash.h"
 
-void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren)
+void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren, int32_t numProbs)
 {
 	int32_t i;
 	df->length = length;
@@ -24,7 +24,8 @@ void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren)
 	}
 	df->active = (int32_t *)calloc((size_t)length, sizeof(int32_t));
 	CHECKPOINTER(df->active);
-	df->prob = 0.0;
+	df->numProbs = numProbs;
+	df->probs = (double *)malloc(sizeof(double) * numProbs);
 	return;
 }
 
@@ -36,6 +37,7 @@ void DatConfig_free(DatConfig * df)
 	free(df->satisfied);
 	free(df->positions);
 	free(df->active);
+	free(df->probs);
 	return;
 }
 
@@ -75,7 +77,8 @@ void DatConfig_set_root_config(DatConfig * df)
 		for(j = 0; j < df->numChildren[i]; j++)
 			df->satisfied[i][j] = 0;
 	}
-	df->prob = 1.0;
+	for(i = 0; i < df->numProbs; i++)
+		df->probs[i] = 1.0;
 	return;
 }
 
@@ -114,7 +117,7 @@ void DatConfig_print(DatConfig * df, FILE * output, int32_t tabCount)
 /* copies the dimensions of df into dfClone */
 void DatConfig_copy_dimensions(DatConfig * df, DatConfig * dfClone)
 {
-	DatConfig_init(dfClone, df->length, df->numChildren);
+	DatConfig_init(dfClone, df->length, df->numChildren, df->numProbs);
 	return;
 }
 
@@ -237,7 +240,7 @@ uint32_t HashTable_get_hash_idx(int32_t * positions, int32_t length)
 /* ConfigCollection functions */
 ////////////////////////////////
 
-void ConfigCollection_init(ConfigCollection * cc, int32_t configLength, int32_t * numChildren)
+void ConfigCollection_init(ConfigCollection * cc, int32_t configLength, int32_t * numChildren, int32_t numThetas)
 {
 	int32_t i;
 	cc->configs = (DatConfig **)malloc(sizeof(DatConfig *) * (size_t)(DEFAULT_CONFIGCOLLECTION_NUMCONFIGS));
@@ -246,12 +249,13 @@ void ConfigCollection_init(ConfigCollection * cc, int32_t configLength, int32_t 
 	{
 		cc->configs[i] = (DatConfig *)malloc(sizeof(DatConfig));
 		CHECKPOINTER(cc->configs[i]);
-		DatConfig_init(cc->configs[i], configLength, numChildren);
+		DatConfig_init(cc->configs[i], configLength, numChildren, numThetas);
 	}
 	cc->curNumConfigs = 0;
 	cc->maxNumConfigs = DEFAULT_CONFIGCOLLECTION_NUMCONFIGS;
 	cc->configLength = configLength;
 	cc->numChildren = numChildren;
+	cc->numThetas = numThetas;
 	HashTable_init(&(cc->hashTable), configLength);
 	return;
 }
@@ -278,7 +282,7 @@ void ConfigCollection_add_config_space(ConfigCollection * cc, int32_t numNewConf
 	{
 		cc->configs[i] = (DatConfig *)malloc(sizeof(DatConfig));
 		CHECKPOINTER(cc->configs[i]);
-		DatConfig_init(cc->configs[i], cc->configLength, cc->numChildren);
+		DatConfig_init(cc->configs[i], cc->configLength, cc->numChildren, cc->numThetas);
 	}
 	cc->maxNumConfigs = newNumConfigs;
 	return;
@@ -340,14 +344,14 @@ void ConfigCollection_print(ConfigCollection * cc, FILE * output)
 	return;
 }
 
-double ConfigCollection_get_final_prob(ConfigCollection * cc)
+double ConfigCollection_get_final_prob(ConfigCollection * cc, int32_t thetaIdx)
 {
 	if(cc->curNumConfigs != 1)
 	{
 		ConfigCollection_print(cc, stdout);
 		PERROR("Attempting to print zero or multiple probabilities in ConfigCollection_print_prob.");
 	}
-	return cc->configs[0]->prob;
+	return cc->configs[0]->probs[thetaIdx];
 }
 
 /* (end of ConfigCollection functions) */
