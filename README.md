@@ -18,7 +18,6 @@ Makefile.
 =======
 trouble installing SuiteSparse. `make` can be run with various different
 targets; see Makefile.
->>>>>>> b02b0f9009dd400ac63897b3480c7d2715dfe7bc
 
 Usage
 -----
