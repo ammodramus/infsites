@@ -134,7 +134,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 		PERROR("Migration rate not specified (--migrates, -M)");
 	//if(opt->theta == -1.0)
 		//PERROR("Mutation rate not specified (--theta, -t)");
-	free(thetas);
+	//free(thetas);
 	return;
 }
 
@@ -214,8 +214,10 @@ void SolverOptions_run_program(SolverOptions * opt)
 		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->migRates);
 	else if(opt->numDemes == 1)
 	{
+		printf("\n");
 		REPORTF(opt->thetas[0]);
 		REPORTF(opt->thetas[1]);
+		printf("\n");
 		solve_D1(opt->fin, opt->numThetas, opt->thetas);
 	}
 	return;
