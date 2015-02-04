@@ -13,7 +13,6 @@ the program uses UMFPACK from the
 [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) library for
 matrix factorization. (To install: `sudo apt-get install libsuitesparse-dev` in
 Ubuntu) I *think* it still supports the CSPARSE routines (included) if you have
-<<<<<<< HEAD
 trouble installing SuiteSparse. `make` can be run with various targets; see
 Makefile.
 =======
