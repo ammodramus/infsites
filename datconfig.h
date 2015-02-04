@@ -14,10 +14,6 @@ typedef struct datconfig_
 	int32_t * numChildren;		// to be shared by all DatConfigs in the same DataSet
 	int32_t * active;
 	double prob;
-	/* <experimental> */
-	int32_t numProbs;
-	double * probs;
-	/* </experimental> */
 	struct datconfig_ * next;
 } DatConfig;
 
@@ -38,12 +34,11 @@ typedef struct configcollection_
 	int32_t configLength;
 	int32_t * numChildren;
 	HashTable hashTable;
-	int32_t numThetas;
 } ConfigCollection;
 
 
 
-void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren, int32_t numProbs);
+void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren);
 void DatConfig_free(DatConfig * df);
 void DatConfig_get_ref_config(BMat * bmat, DatConfig * config);
 void DatConfig_print(DatConfig * df, FILE * output, int32_t tabCount);
@@ -62,13 +57,13 @@ uint32_t HashTable_get_hash_idx(int32_t * positions, int32_t length);
 #define DEFAULT_CONFIGCOLLECTION_NUMCONFIGS 1000
 #define DEFAULT_CONFIGCOLLECTION_INCREASESIZE 1000
 
-void ConfigCollection_init(ConfigCollection * cc, int32_t configLength, int32_t * numChildren, int32_t numThetas);
+void ConfigCollection_init(ConfigCollection * cc, int32_t configLength, int32_t * numChildren);
 void ConfigCollection_free(ConfigCollection * cc);
 void ConfigCollection_add_config_space(ConfigCollection * cc, int32_t numNewConfigs);
 DatConfig * ConfigCollection_get_empty_config(ConfigCollection * cc);
 void ConfigCollection_add_config(ConfigCollection * cc, DatConfig * config);
 void ConfigCollection_reset(ConfigCollection * cc);
 void ConfigCollection_print(ConfigCollection * cc, FILE * output);
-double ConfigCollection_get_final_prob(ConfigCollection * cc, int32_t thetaIdx);
+double ConfigCollection_get_final_prob(ConfigCollection * cc);
 
 #endif

@@ -11,7 +11,7 @@
 #include "dataset2d.h"
 #include "hash.h"
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, double * migRates)
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, double theta, double * migRates)
 {
 	int32_t i,j, numStages, probMultiplier, configLength, finalIdx;
 	double finalProb;
@@ -20,8 +20,7 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	ds->numSamples = inputbmat->nrows;
 	ds->recipientCollection = 1;
 	numStages = ds->numSegSites + ds->numSamples;
-	ds->thetas = thetas;
-	ds->numThetas = numThetas;
+	ds->theta = theta;
 	ds->migRates[0] = migRates[0];
 	ds->migRates[1] = migRates[1];
 	ds->collection[0] = (SuperCollection *)malloc(sizeof(SuperCollection));
@@ -46,15 +45,15 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	configLength = ds->nodeList.numNodes;
 	NodeList_get_num_children(&(ds->nodeList));
 	NodeList_get_idxToNode(&(ds->nodeList));
-	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren);
 	DatConfig_get_ref_config(&(ds->bmat2d->bmat), &(ds->refConfig));
 	DatConfig2d_init(&(ds->refConfig2d), configLength, &(ds->refConfig), (SuperConfig *)NULL); 
 	DatConfig2d_get_ref_datconfig2d(ds->bmat2d, &(ds->refConfig2d));
 	DatConfig rootPanmictic;
-	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren);
 	DatConfig_set_root_config(&rootPanmictic);
-	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren, ds->numThetas);
-	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren, ds->numThetas);
+	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren);
+	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren);
 	SuperCollection_add_SuperConfig(ds->collection[0], &rootPanmictic, ds);
 	ds->collection[0]->superConfigs[0]->configs2d[0]->prob = 1.0;
 	ds->collection[0]->superConfigs[0]->configs2d[1]->prob = 1.0;
@@ -63,6 +62,99 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
 	finalProb = ds->collection[!(ds->recipientCollection)]->superConfigs[0]->configs2d[finalIdx]->prob * (double)probMultiplier;
 	printf("%e\n", finalProb);
+	SuperCollection_reset(ds->collection[!(ds->recipientCollection)]);
+	SuperCollection_reset(ds->collection[(ds->recipientCollection)]);
+	DatConfig_free(&rootPanmictic);
+	DataSet2d_free(ds);
+	return;
+}
+
+void DataSet2d_init_print(DataSet2d * ds, BMat2d * inputbmat, double theta, double * migRates)
+{
+	int32_t i,j, numStages, probMultiplier, configLength, finalIdx;
+	double finalProb;
+	ds->bmat2d = inputbmat;
+	ds->numSegSites = inputbmat->ncols;
+	ds->numSamples = inputbmat->nrows;
+	ds->recipientCollection = 1;
+	numStages = ds->numSegSites + ds->numSamples;
+	ds->theta = theta;
+	ds->migRates[0] = migRates[0];
+	ds->migRates[1] = migRates[1];
+	ds->collection[0] = (SuperCollection *)malloc(sizeof(SuperCollection));
+	CHECKPOINTER(ds->collection[0]);
+	ds->collection[1] = (SuperCollection *)malloc(sizeof(SuperCollection));
+	CHECKPOINTER(ds->collection[1]);
+	printf("\nat first\n");
+	BMat_print(&(ds->bmat2d->bmat), stdout);
+	BMat_order_columns(&(ds->bmat2d->bmat));
+	printf("\nafter sorting\n");
+	BMat_print(&(ds->bmat2d->bmat), stdout);
+	probMultiplier = DataSet2d_get_prob_multiplier(ds);
+	ds->Lij = (BMat *)malloc(sizeof(BMat));
+	CHECKPOINTER(ds->Lij);
+	BMat_init(ds->Lij, ds->bmat2d->nrows, ds->bmat2d->ncols);
+	for(i = 0; i < ds->bmat2d->nrows; i++)
+		for(j = 0; j < ds->bmat2d->ncols; j++)
+			ds->Lij->mat[i][j] = BMat_get_Lij(&(ds->bmat2d->bmat), i, j);
+	printf("\nLij\n");
+	BMat_print(ds->Lij, stdout);
+	ds->Lj = (int32_t *)malloc(sizeof(int32_t) * (size_t)ds->bmat2d->ncols);
+	CHECKPOINTER(ds->Lj);
+	for(j = 0; j < ds->bmat2d->ncols; j++)
+		ds->Lj[j] = BMat_get_Lj(&(ds->bmat2d->bmat), ds->Lij, j);
+	printf("\nLj: ");
+	for(j = 0; j < ds->bmat2d->ncols; j++)
+		printf("%i ", ds->Lj[j]);
+	printf("\n");
+	if(!BMat_determine_good(&(ds->bmat2d->bmat), ds->Lij, ds->Lj))
+		PERROR("Data does not conform to infinite-sites mutation model.");
+	NodeList_create_phylogeny(&(ds->nodeList), &(ds->bmat2d->bmat), ds->Lj);
+	configLength = ds->nodeList.numNodes;
+	NodeList_print(&(ds->nodeList), stdout);
+	NodeList_get_num_children(&(ds->nodeList));
+	printf("numChildren: ");
+	for(j = 0; j < configLength; j++)
+		printf("%i ", ds->nodeList.numChildren[j]);
+	printf("\n");
+	NodeList_get_idxToNode(&(ds->nodeList));
+	printf("idxToNode:\n");
+	for(j = 0; j < configLength; j++)
+		printf("%i -> %p\n", j, ds->nodeList.idxToNode[j]);
+	printf("\n");
+	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren);
+	DatConfig_get_ref_config(&(ds->bmat2d->bmat), &(ds->refConfig));
+	printf("\none-deme refConfig:");
+	DatConfig_print(&(ds->refConfig), stdout, 0);
+	// n.b., setting ds->refConfig2d's corresponding SuperConfig to NULL! Just need the positions.
+	DatConfig2d_init(&(ds->refConfig2d), configLength, &(ds->refConfig), (SuperConfig *)NULL); 
+	DatConfig2d_get_ref_datconfig2d(ds->bmat2d, &(ds->refConfig2d));
+	DatConfig rootPanmictic;
+	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren);
+	DatConfig_set_root_config(&rootPanmictic);
+	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren);
+	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren);
+	SuperCollection_add_SuperConfig(ds->collection[0], &rootPanmictic, ds);
+	ds->collection[0]->superConfigs[0]->configs2d[0]->prob = 1.0;
+	ds->collection[0]->superConfigs[0]->configs2d[1]->prob = 1.0;
+	//SuperCollection_print(ds->collection[0], stdout);
+	for(j = 0; j < numStages-1; j++)
+	{
+		printf("stage %i\n", j);
+		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds);
+	}
+	printf("\n\nAfter transfer and linking...\n\n");
+	SuperCollection_print(ds->collection[!(ds->recipientCollection)], stdout);
+	//for(j = 0; j < configLength; j++)
+		//printf("positionMultipliers[%i] = %i\n", j, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers[j]);
+	//for(j = 0; j < configLength; j++)
+		//printf("positions[%i] = (%i, %i)\n", j, ds->refConfig2d.positions[j][0], ds->refConfig2d.positions[j][1]);
+	finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
+	REPORTI(finalIdx);
+	printf("number of SuperConfigs: %i\n", ds->collection[!(ds->recipientCollection)]->curNumSuperConfigs);
+	printf("probMultiplier = %i\n", probMultiplier);
+	finalProb = ds->collection[!(ds->recipientCollection)]->superConfigs[0]->configs2d[finalIdx]->prob * (double)probMultiplier;
+	REPORTF(finalProb);
 	SuperCollection_reset(ds->collection[!(ds->recipientCollection)]);
 	SuperCollection_reset(ds->collection[(ds->recipientCollection)]);
 	DatConfig_free(&rootPanmictic);

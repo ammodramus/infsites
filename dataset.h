@@ -19,11 +19,10 @@ typedef struct dataset_
 	ConfigCollection * collection[2];
 	double migRate;		// later
 	double theta;
-	int32_t numThetas;
-	double * thetas;
 } DataSet;
 
-void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas);
+void DataSet_init(DataSet * ds, BMat * inputbmat, double theta);
+void DataSet_init_print(DataSet * ds, BMat * inputbmat, double theta);
 void DataSet_free(DataSet * ds);
 void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds);
 void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * recipient, Node ** idxToNode, DataSet * ds);

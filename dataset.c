@@ -8,18 +8,15 @@
 #include "dataset.h"
 #include "hash.h"
 
-//void DataSet_init(DataSet * ds, BMat * inputbmat, double theta)
-void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas)
+void DataSet_init(DataSet * ds, BMat * inputbmat, double theta)
 {
-	int32_t i,j,k, zeroFirst, numStages, probMultiplier;
+	int32_t i,j, zeroFirst, numStages, probMultiplier;
 	double finalProb;
 	ds->bmat = inputbmat;
 	ds->numSegSites = inputbmat->ncols;
 	ds->numSamples = inputbmat->nrows;
 	numStages = ds->numSegSites + ds->numSamples;
-	//ds->theta = theta;
-	ds->numThetas = numThetas;
-	ds->thetas = thetas;
+	ds->theta = theta;
 	ds->collection[0] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
 	CHECKPOINTER(ds->collection[0]);
 	ds->collection[1] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
@@ -48,15 +45,15 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	//NodeList_print(&(ds->nodeList), stdout);
 	NodeList_get_num_children(&(ds->nodeList));
 	NodeList_get_idxToNode(&(ds->nodeList));
-	DatConfig_init(&(ds->refConfig), ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_init(&(ds->refConfig), ds->bmat->ncols+1, ds->nodeList.numChildren);
 	DatConfig_get_ref_config(ds->bmat, &(ds->refConfig));
 	DatConfig rootConfig;
-	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren);
 	DatConfig_set_root_config(&rootConfig);
 	/* initialize the ConfigCollections, and then add the root configuration to
 	 * the first Collection, and off we go! */
-	ConfigCollection_init(ds->collection[0], ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
-	ConfigCollection_init(ds->collection[1], ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	ConfigCollection_init(ds->collection[0], ds->bmat->ncols+1, ds->nodeList.numChildren);
+	ConfigCollection_init(ds->collection[1], ds->bmat->ncols+1, ds->nodeList.numChildren);
 	ConfigCollection_add_config(ds->collection[0], &rootConfig);
 	zeroFirst = 0;
 	for(i = 0; i < numStages-1; i++)
@@ -67,13 +64,95 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 		//fprintf(stdout,"ds->collection[%i]->curNumConfigs = %i\n", !zeroFirst, ds->collection[!zeroFirst]->curNumConfigs);
 		zeroFirst = !zeroFirst;
 	}
-	for(k = 0; k < ds->numThetas; k++)
+	finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst]) * (double)probMultiplier;
+	fprintf(stdout, "%e\n", finalProb);
+	ConfigCollection_free(ds->collection[0]);
+	ConfigCollection_free(ds->collection[1]);
+	free(ds->collection[0]);
+	free(ds->collection[1]);
+	DatConfig_free(&(ds->refConfig));
+	DatConfig_free(&rootConfig);
+	//NodeList_free(&(ds->nodeList));
+	return;
+}
+
+void DataSet_init_print(DataSet * ds, BMat * inputbmat, double theta)
+{
+	int32_t i,j, zeroFirst, numStages, probMultiplier;
+	double finalProb;
+	ds->bmat = inputbmat;
+	ds->numSegSites = inputbmat->ncols;
+	ds->numSamples = inputbmat->nrows;
+	numStages = ds->numSegSites + ds->numSamples;
+	ds->theta = theta;
+	ds->collection[0] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
+	CHECKPOINTER(ds->collection[0]);
+	ds->collection[1] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
+	CHECKPOINTER(ds->collection[1]);
+	/* there are one more nodes in the phylogeny than
+	 * segregating sites. */
+	printf("\nat first\n");
+	BMat_print(ds->bmat, stdout);
+	BMat_order_columns(ds->bmat);
+	printf("\nafter sorting\n");
+	BMat_print(ds->bmat, stdout);
+	ds->Lij = (BMat *)malloc(sizeof(BMat));
+	CHECKPOINTER(ds->Lij);
+	BMat_init(ds->Lij, ds->bmat->nrows, ds->bmat->ncols);
+	for(i = 0; i < ds->bmat->nrows; i++)
+		for(j = 0; j < ds->bmat->ncols; j++)
+			ds->Lij->mat[i][j] = BMat_get_Lij(ds->bmat, i, j);
+	printf("\nLij\n");
+	BMat_print(ds->Lij, stdout);
+	ds->Lj = (int32_t *)malloc(sizeof(int32_t) * (size_t)ds->bmat->ncols);
+	CHECKPOINTER(ds->Lj);
+	for(j = 0; j < ds->bmat->ncols; j++)
+		ds->Lj[j] = BMat_get_Lj(ds->bmat, ds->Lij, j);
+	printf("\nLj: ");
+	for(j = 0; j < ds->bmat->ncols; j++)
+		printf("%i ", ds->Lj[j]);
+	printf("\nvalid: %i\n", BMat_determine_good(ds->bmat, ds->Lij, ds->Lj));
+	NodeList_create_phylogeny(&(ds->nodeList), ds->bmat, ds->Lj);
+	NodeList_print(&(ds->nodeList), stdout);
+	NodeList_get_num_children(&(ds->nodeList));
+	NodeList_get_idxToNode(&(ds->nodeList));
+	printf("numChildren: ");
+	for(j = 0; j < ds->nodeList.numNodes; j++)
+		printf("%i ", ds->nodeList.numChildren[j]);
+	printf("\n");
+	printf("idxToNode: ");
+	for(j = 0; j < ds->nodeList.numNodes; j++)
+		printf("%p ", ds->nodeList.idxToNode[j]);
+	printf("\n");
+	DatConfig_init(&(ds->refConfig), ds->bmat->ncols+1, ds->nodeList.numChildren);
+	DatConfig_get_ref_config(ds->bmat, &(ds->refConfig));
+	fprintf(stdout, "\n(Below is refConfig...)");
+	DatConfig_print(&(ds->refConfig), stdout, 0);
+	DatConfig rootConfig;
+	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren);
+	DatConfig_set_root_config(&rootConfig);
+
+	/* initialize the ConfigCollections, and then add the root configuration to
+	 * the first Collection, and off we go! */
+	ConfigCollection_init(ds->collection[0], ds->bmat->ncols+1, ds->nodeList.numChildren);
+	ConfigCollection_init(ds->collection[1], ds->bmat->ncols+1, ds->nodeList.numChildren);
+	ConfigCollection_add_config(ds->collection[0], &rootConfig);
+
+	zeroFirst = 0;
+	ConfigCollection_print(ds->collection[zeroFirst], stdout);
+	for(i = 0; i < numStages-1; i++)
 	{
-		finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst], k) * (double)probMultiplier;
-		fprintf(stdout, "%e\n", finalProb);
+		DataSet_transfer_config_collections(ds->collection[zeroFirst], ds->collection[!zeroFirst], ds);
+		ConfigCollection_print(ds->collection[!zeroFirst], stdout);
+		zeroFirst = !zeroFirst;
 	}
 
-	// freeing memory
+	probMultiplier = DataSet_get_prob_multiplier(ds->bmat);
+	finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst]) * (double)probMultiplier;
+
+	fprintf(stdout, "prob multiplier: %i\n", probMultiplier);
+	fprintf(stdout, "Final prob: %e\n", finalProb);
+
 	ConfigCollection_free(ds->collection[0]);
 	ConfigCollection_free(ds->collection[1]);
 	free(ds->collection[0]);
@@ -105,7 +184,7 @@ void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollect
 
 void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * recipient, Node ** idxToNode, DataSet * ds)
 {
-	int32_t i, j, k, n, ntot, ntotCoal, nref, nunsat, numChildren, mutIdx, lingering;
+	int32_t i, j, n, ntot, ntotCoal, nref, nunsat, numChildren, mutIdx, lingering;
 	double transitionProb;
 	// TODO: write separate functions for copying dimensions and copying
 	// contents of a DatConfig
@@ -134,13 +213,8 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
 			{
 				DatConfig_copy_config(curConfig, &deriv);
 				deriv.positions[i] += 1;
-				for(k = 0; k < ds->numThetas; k++)
-				{
-					//REPORTF(ds->thetas[k]);
-					transitionProb =  (double)((n+1.0)*n)/(double)((ntotCoal)*ds->thetas[k] + ntotCoal*(ntotCoal-1.0));
-					//REPORTF(transitionProb);
-					deriv.probs[k] = curConfig->probs[k] * transitionProb;
-				}
+				transitionProb =  (double)((n+1.0)*n)/(double)((ntotCoal)*ds->theta + ntotCoal*(ntotCoal-1.0));
+				deriv.prob = curConfig->prob * transitionProb;
 				//fprintf(stdout, "Coalescing : curConfig->prob = %f, transitionProb = %f\n", curConfig->prob, transitionProb);
 				if(nunsat == 0 && nref == deriv.positions[i]) 	// check for completion
 					deriv.active[i] = 0;
@@ -169,13 +243,9 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
 							if(nunsat == 1 && deriv.positions[i] == nref)
 								deriv.active[i] = 0;
 							//fprintf(stdout, "curConfig->prob = %f, transitionProb = %f\n", curConfig->prob, (double)(ds->theta)/(double)(ds->theta + deriv.positions[i]+1.0-1.0));
-							for(k = 0; k < ds->numThetas; k++)
-							{
-								transitionProb = (double)(ds->thetas[k]/2.0)/(double)(ntot * ds->thetas[k]/2.0 + ntot*(ntot-1)/2);
-								//fprintf(stdout, "Mutating : curConfig->prob = %f, transitionProb = %f\n", curConfig->prob, transitionProb);
-								//deriv.prob = curConfig->prob * transitionProb;
-								deriv.probs[k] = curConfig->probs[k] * transitionProb;
-							}
+							transitionProb = (double)(ds->theta/2.0)/(double)(ntot * ds->theta/2.0 + ntot*(ntot-1)/2);
+							//fprintf(stdout, "Mutating : curConfig->prob = %f, transitionProb = %f\n", curConfig->prob, transitionProb);
+							deriv.prob = curConfig->prob * transitionProb;
 							ConfigCollection_add_config(recipient, &deriv);
 						}
 					}
