@@ -27,7 +27,8 @@ typedef struct dataset2d_
 	double theta;
 	int32_t numThetas;
 	double * thetas;
-	int32_t numMigrates;
+	int32_t numMigRates;
+	double * migRates;
 } DataSet2d;
 
 
@@ -37,8 +38,8 @@ void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipie
 void DataSet2d_solve_equations(SuperCollection * collection);
 void DataSet2d_donate_deriv_superconfigs(SuperConfig * super, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_transfer_config_collections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds);
-void DataSet2d_link_supercollections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds);
-void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds);
+void DataSet2d_link_supercollections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx);
+void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx);
 void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipient, DataSet2d * ds);
 int32_t DataSet2d_binomial_coeff_(int32_t n, int32_t k);
 int32_t DataSet2d_get_prob_multiplier(DataSet2d * ds);

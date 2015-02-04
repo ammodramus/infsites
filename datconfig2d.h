@@ -22,6 +22,9 @@ typedef struct datconfig2d_
 	double prob;					// probability of this data configuration
 	struct superconfig_ * super; // pointer to the SuperAC to which this 2d config belongs.
 	struct datconfig2d_ * next;		// for storing in the (2D) hash table.
+	int32_t numThetas;
+	int32_t numMigRates;
+	double ** probs;
 } DatConfig2d;
 
 typedef struct superconfig_
@@ -36,6 +39,10 @@ typedef struct superconfig_
 	// array of int32_t's to multiply against, used to get the matrix /
 	// DatConfig2d array index from a particular DatConfig2d's positions array.
 	SuperEquations eq;
+	int32_t numThetas;
+	int32_t numMigRates;
+	// for multiple thetas and migration rates
+	SuperEquations ** eqs;
 	struct superconfig_ * next;
 } SuperConfig;
 

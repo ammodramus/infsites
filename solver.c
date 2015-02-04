@@ -211,22 +211,25 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 	return;
 }
 
-//solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->migRatesPair);
+// still need to change this
 void solve_D2(FILE * fin, int32_t numThetas, double * thetas, double * migRatesPair)
 {
 	BMat2d b2;
 	DataSet2d ds;
 	int32_t k;
-	//double theta = 1.0;
-	//double * migRatesPair = (double *)malloc(sizeof(double) * 2);
-	//double migRatesPair[2];
-	//migRatesPair[0] = 0.5;
-	//migRatesPair[1] = 0.5;
+
+	/////////////////////////
+	// testing conditions:
+	double migRates[3];
+	int32_t numMigRates = 3;
+	/////////////////////////
+	
+	// to make probabilities maximally compatible with genetree, which defines
+	// theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu.
 	for(k = 0; k < numThetas; k++)
-		thetas[k] /= 2.0; 		// to make probabilities maximally compatible with genetree, which defines theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu.
-	//BMat2d_read_input("testfile2d", &b2);
+		thetas[k] /= 2.0;
 	BMat2d_read_input(fin, &b2);
-	DataSet2d_init(&ds, &b2, numThetas, thetas, migRatesPair);
+	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates);
 	BMat2d_free(&b2);
 	return;
 }

@@ -11,7 +11,7 @@
 #include "dataset2d.h"
 #include "hash.h"
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, double * migRatesPair)
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates)
 {
 	int32_t i,j, numStages, probMultiplier, configLength, finalIdx;
 	double finalProb;
@@ -20,10 +20,13 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	ds->numSamples = inputbmat->nrows;
 	ds->recipientCollection = 1;
 	numStages = ds->numSegSites + ds->numSamples;
+
 	ds->thetas = thetas;
 	ds->numThetas = numThetas;
-	ds->migRatesPair[0] = migRatesPair[0];
-	ds->migRatesPair[1] = migRatesPair[1];
+	ds->migRates = migRates;
+	ds->numMigRates = numMigRates;
+	// TODO here.
+
 	ds->collection[0] = (SuperCollection *)malloc(sizeof(SuperCollection));
 	CHECKPOINTER(ds->collection[0]);
 	ds->collection[1] = (SuperCollection *)malloc(sizeof(SuperCollection));
@@ -87,9 +90,16 @@ void DataSet2d_free(DataSet2d * ds)
 
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds)
 {
+	int32_t thetaIdx,migIdx;
 	DataSet2d_transfer_config_collections(donor, recipient, ds);
-	DataSet2d_link_supercollections(donor, recipient, ds);
-	DataSet2d_solve_equations(recipient);
+	for(thetaIdx = 0; thetaIdx < ds->numThetas; thetaIdx++)
+	{
+		for(migIdx = 0; migIdx < ds->numMigRates; migIdx++)
+		{
+			DataSet2d_link_supercollections(donor, recipient, ds, thetaIdx, migIdx);
+			DataSet2d_solve_equations(recipient);
+		}
+	}
 	ds->recipientCollection = !(ds->recipientCollection);
 	return;
 }
@@ -203,7 +213,7 @@ void DataSet2d_transfer_config_collections(SuperCollection * donor, SuperCollect
 }
 
 // *linking probabilities* doesn't require the duplication of DatConfig2d's... just the 2d-positions.
-void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipient, DataSet2d * ds)
+void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx)
 {
 	int32_t i, j, k, n, n0, n1, ntot, ntot0, ntot1, ntotCoal, ntotCoal0, ntotCoal1, nref, nunsat, curNumChildren, mutIdx, lingering, twoDemeIdx;
 	int32_t configLength = config->panmictic->length;
@@ -504,19 +514,19 @@ int32_t DataSet2d_get_prob_multiplier(DataSet2d * ds)
 	return mult;
 }
 
-void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds)
+void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx)
 {
 	int32_t i, numConfigs2d = donorConfig->numConfigs2d;
 	for(i = 0; i < numConfigs2d; i++)
-		DataSet2d_link_probabilities(donorConfig->configs2d[i], recipient, ds);
+		DataSet2d_link_probabilities(donorConfig->configs2d[i], recipient, ds, thetaIdx, migIdx);
 	return;
 }
 
-void DataSet2d_link_supercollections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds)
+void DataSet2d_link_supercollections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx)
 {
 	int32_t i, numSuperConfigs = donor->curNumSuperConfigs;
 	for(i = 0; i < numSuperConfigs; i++)
-		DataSet2d_link_datconfig2ds(donor->superConfigs[i], recipient, ds);
+		DataSet2d_link_datconfig2ds(donor->superConfigs[i], recipient, ds, thetaIdx, migIdx);
 	return;
 }
 
