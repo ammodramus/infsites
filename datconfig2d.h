@@ -111,10 +111,10 @@ void SuperConfig_fill_in_datconfigs2d(SuperConfig * super);
 void SuperConfig_fill_in_datconfigs2d_nonrecursive(SuperConfig * super);
 void SuperConfig_print(SuperConfig * config, FILE * output);
 
-void SuperCollection_init(SuperCollection * collection, int32_t configLength, int32_t * numChildren);
+void SuperCollection_init(SuperCollection * collection, int32_t configLength, int32_t * numChildren, int32_t numThetas);
 void SuperCollection_reset(SuperCollection * collection);
-void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t numNewSuperConfigs);
-SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection);
+void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t numNewSuperConfigs, int32_t numThetas);
+SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection, int32_t numThetas);
 //void SuperCollection_add_SuperConfig(SuperCollection * collection, SuperConfig * cloneConfig);
 void SuperCollection_add_SuperConfig(SuperCollection * collection, DatConfig * panmictic, struct dataset2d_ * ds);
 void SuperCollection_free(SuperCollection * collection);
