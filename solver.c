@@ -114,6 +114,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				// deal with migration-rate file
 				break;
 			default:
+				printf("%c\n", c);
 				abort();
 				break;
 		}
@@ -128,7 +129,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 		for(i = optind; i < argc; i++)
 		{
 			//printf("argv[%i]: %s\n", i, argv[i]);
-			success = (int)sscanf(argv[i], "%lf", &(opt->thetas[thetaIdx]));
+			success = (int)sscanf(argv[i], "%lf", &(thetas[thetaIdx]));
 			if(!success)
 				PERROR("Could not read theta in parsing options.");
 			thetaIdx++;
