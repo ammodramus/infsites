@@ -119,14 +119,14 @@ void SuperConfig_init(SuperConfig * super, DatConfig * panmictic, DataSet2d * ds
 	super->next = NULL;
 	SuperConfig_get_position_multipliers(positions, configLength, super->positionMultipliers);
 	// matrix initialization
-	SuperConfig_fill_out_matrix(super, ds->migRates, ds->theta);
+	SuperConfig_fill_out_matrix(super, ds->migRatesPair, ds->theta);
 	//SuperConfig_fill_in_datconfigs2d(super);
 	SuperConfig_fill_in_datconfigs2d_nonrecursive(super);
 	return;
 }
 
-/* migRates is an input parameter, a malloc'ed array of length 2 */
-void SuperConfig_fill_out_matrix(SuperConfig * super, double * migRates, double theta)
+/* migRatesPair is an input parameter, a malloc'ed array of length 2 */
+void SuperConfig_fill_out_matrix(SuperConfig * super, double * migRatesPair, double theta)
 {
 	// nz initialized to numConfigs2d for the diagonal entries, which aren't counted later
 	int32_t j, idx, n, n0, n1, nz = super->numConfigs2d;
@@ -155,16 +155,16 @@ void SuperConfig_fill_out_matrix(SuperConfig * super, double * migRates, double 
 		}
 		n = n0 + n1;
 		// n.b. all rates are multiplied by 2.
-		totalRate = n0*(n0-1.0) + n1*(n1-1.0) + n*theta + n0*migRates[0] + n1*migRates[1];
+		totalRate = n0*(n0-1.0) + n1*(n1-1.0) + n*theta + n0*migRatesPair[0] + n1*migRatesPair[1];
 		// fill out the matrix row...
-		SuperConfig_fill_matrix_row(super, idx, positions, positionsBucket, migRates, totalRate);
+		SuperConfig_fill_matrix_row(super, idx, positions, positionsBucket, migRatesPair, totalRate);
 	}
 	free(positions);
 	free(positionsBucket);
 	return;
 }
 
-void SuperConfig_fill_matrix_row(SuperConfig * super, int32_t rowIdx, twoints * positions, twoints * positionsBucket, double * migRates, double totalRate)
+void SuperConfig_fill_matrix_row(SuperConfig * super, int32_t rowIdx, twoints * positions, twoints * positionsBucket, double * migRatesPair, double totalRate)
 {
 	int32_t i, j, deme, colIdx;
 	double migProb;
@@ -182,8 +182,8 @@ void SuperConfig_fill_matrix_row(SuperConfig * super, int32_t rowIdx, twoints * 
 			positionsBucket[i][deme]--;
 			positionsBucket[i][!deme]++;
 			colIdx = SuperConfig_get_index(positionsBucket, super->positionMultipliers, super->configLength);
-			//printf("*** %i %i (deme = %i, migRates[deme] = %f, totalRate = %f) ***\n", positions[i][0], positions[i][1], deme, migRates[deme], totalRate);
-			migProb = (double)(positions[i][deme]) * migRates[deme] / totalRate;
+			//printf("*** %i %i (deme = %i, migRatesPair[deme] = %f, totalRate = %f) ***\n", positions[i][0], positions[i][1], deme, migRatesPair[deme], totalRate);
+			migProb = (double)(positions[i][deme]) * migRatesPair[deme] / totalRate;
 			SuperEquations_add_entry(&(super->eq), rowIdx, colIdx, -1.0 * migProb);
 		}
 	}

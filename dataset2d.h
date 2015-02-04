@@ -23,14 +23,15 @@ typedef struct dataset2d_
 	struct datconfig_ refConfig;
 	struct datconfig2d_ refConfig2d;
 	struct supercollection_ * collection[2];
-	double migRates[2];
+	double migRatesPair[2];
 	double theta;
 	int32_t numThetas;
 	double * thetas;
+	int32_t numMigrates;
 } DataSet2d;
 
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, double * migRates);
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, double * migRatesPair);
 void DataSet2d_free(DataSet2d * ds);
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_solve_equations(SuperCollection * collection);

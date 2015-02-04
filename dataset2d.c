@@ -11,7 +11,7 @@
 #include "dataset2d.h"
 #include "hash.h"
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, double * migRates)
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, double * migRatesPair)
 {
 	int32_t i,j, numStages, probMultiplier, configLength, finalIdx;
 	double finalProb;
@@ -22,8 +22,8 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	numStages = ds->numSegSites + ds->numSamples;
 	ds->thetas = thetas;
 	ds->numThetas = numThetas;
-	ds->migRates[0] = migRates[0];
-	ds->migRates[1] = migRates[1];
+	ds->migRatesPair[0] = migRatesPair[0];
+	ds->migRatesPair[1] = migRatesPair[1];
 	ds->collection[0] = (SuperCollection *)malloc(sizeof(SuperCollection));
 	CHECKPOINTER(ds->collection[0]);
 	ds->collection[1] = (SuperCollection *)malloc(sizeof(SuperCollection));
@@ -265,17 +265,17 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 						PERROR("superConfig not found.");
 					}
 					twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
-					totalRate = (ntotCoal)*ds->theta + ntotCoal0*(ntotCoal0-1.0) + ntot1*(ntot1-1.0) + ntotCoal0*ds->migRates[0] + ntot1*ds->migRates[1];
+					totalRate = (ntotCoal)*ds->theta + ntotCoal0*(ntotCoal0-1.0) + ntot1*(ntot1-1.0) + ntotCoal0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
 					//printf("\ncoalescence information (deme 0)\n");
 					//REPORTI(ntotCoal);
 					//REPORTI(ntotCoal0);
 					//REPORTI(ntotCoal1);
 					//REPORTF(ds->theta);
-					//REPORTF(ds->migRates[0]);
-					//REPORTF(ds->migRates[1]);
+					//REPORTF(ds->migRatesPair[0]);
+					//REPORTF(ds->migRatesPair[1]);
 					//REPORTF(totalRate);
 					//printf("totalRate = %i*%f + %i*(%i-1) + %i*(%i-1) + %i*%f + %i*%f = %f\n",
-							//ntotCoal, ds->theta, ntotCoal0, ntotCoal0, ntot1, ntot1, ntotCoal0, ds->migRates[0], ntot1, ds->migRates[1], totalRate);
+							//ntotCoal, ds->theta, ntotCoal0, ntotCoal0, ntot1, ntot1, ntotCoal0, ds->migRatesPair[0], ntot1, ds->migRatesPair[1], totalRate);
 					//REPORTI(n0);
 					// n.b. in the following line (n0+1.0)*n0 is the same as n0Coal*(n0Coal-1)
 					transitionProb = (n0+1.0)*n0 / totalRate;
@@ -322,8 +322,8 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 									PERROR("superConfig not found.");
 								}
 								twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
-								//totalRate = (ntotCoal)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRates[0] + ntot1*ds->migRates[1];
-								totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRates[0] + ntot1*ds->migRates[1];
+								//totalRate = (ntotCoal)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
+								totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
 								//transitionProb = n0 * ds->theta / totalRate;
 								transitionProb = ds->theta / totalRate;
 								//printf("mutation transition prob = %f, multiplied by config->prob = %f\n", transitionProb, config->prob);
@@ -360,18 +360,18 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 							SuperConfig_print(ds->collection[ds->recipientCollection]->superConfigs[j], stdout);
 						PERROR("superConfig not found.");
 					}
-					totalRate = (ntotCoal)*ds->theta + ntot0*(ntot0-1.0) + ntotCoal1*(ntotCoal1-1.0) + ntot0*ds->migRates[0] + ntotCoal1*ds->migRates[1];
+					totalRate = (ntotCoal)*ds->theta + ntot0*(ntot0-1.0) + ntotCoal1*(ntotCoal1-1.0) + ntot0*ds->migRatesPair[0] + ntotCoal1*ds->migRatesPair[1];
 					//printf("\ncoalescence information (deme 1)\n");
 					//REPORTI(ntotCoal);
 					//REPORTI(ntotCoal0);
 					//REPORTI(ntotCoal1);
 					//REPORTF(ds->theta);
-					//REPORTF(ds->migRates[0]);
-					//REPORTF(ds->migRates[1]);
+					//REPORTF(ds->migRatesPair[0]);
+					//REPORTF(ds->migRatesPair[1]);
 					//REPORTF(totalRate);
 					//REPORTI(n1);
 					//printf("totalRate = %i*%f + %i*(%i-1) + %i*(%i-1) + %i*%f + %i*%f = %f\n",
-							//ntotCoal, ds->theta, ntot0, ntot0, ntotCoal1, ntotCoal1, ntot0, ds->migRates[0], ntot1, ds->migRates[1], totalRate);
+							//ntotCoal, ds->theta, ntot0, ntot0, ntotCoal1, ntotCoal1, ntot0, ds->migRatesPair[0], ntot1, ds->migRatesPair[1], totalRate);
 					twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
 					transitionProb = (n1+1.0)*n1 / totalRate;
 					//printf("coalescence transition prob = %f, multiplied by config->prob = %f\n", transitionProb, config->prob);
@@ -417,9 +417,9 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 									PERROR("superConfig not found.");
 								}
 								twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
-								//totalRate = (ntotCoal)*ds->theta + ntotCoal0*(ntotCoal0-1.0) + ntot0*ds->migRates[0] + ntot1*ds->migRates[1];
-								//totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot0*ds->migRates[0] + ntot1*ds->migRates[1];
-								totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRates[0] + ntot1*ds->migRates[1];
+								//totalRate = (ntotCoal)*ds->theta + ntotCoal0*(ntotCoal0-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
+								//totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
+								totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
 								//transitionProb = n1 * ds->theta / totalRate;
 								transitionProb = ds->theta / totalRate;
 								//printf("mutation transition prob = %f, multiplied by config->prob = %f\n", transitionProb, config->prob);
@@ -527,14 +527,14 @@ int main()
 	BMat2d b2;
 	DataSet2d ds;
 	double theta = 1.0;
-	double * migRates = (double *)malloc(sizeof(double) * 2);
-	migRates[0] = 0.5;
-	migRates[1] = 0.5;
+	double * migRatesPair = (double *)malloc(sizeof(double) * 2);
+	migRatesPair[0] = 0.5;
+	migRatesPair[1] = 0.5;
 	theta /= 2.0; 		// to make probabilities maximally compatible with genetree, which defines theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu.
 	BMat2d_read_input("testfile2d", &b2);
-	DataSet2d_init(&ds, &b2, theta, migRates);
+	DataSet2d_init(&ds, &b2, theta, migRatesPair);
 	BMat2d_free(&b2);
-	free(migRates);
+	free(migRatesPair);
 	return 0;
 }
 */

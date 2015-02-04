@@ -95,8 +95,8 @@ void DatConfig2d_get_ref_datconfig2d(BMat2d * bmat2d, DatConfig2d * config);
 void DatConfig2d_free(DatConfig2d * config);
 
 void SuperConfig_init(SuperConfig * super, DatConfig * panmictic, struct dataset2d_ * ds);
-void SuperConfig_fill_out_matrix(SuperConfig * super, double * migRates, double theta);
-void SuperConfig_fill_matrix_row(SuperConfig * super, int32_t rowIdx, twoints * positions, twoints * positionsBucket, double * migRates, double totalRate);
+void SuperConfig_fill_out_matrix(SuperConfig * super, double * migRatesPair, double theta);
+void SuperConfig_fill_matrix_row(SuperConfig * super, int32_t rowIdx, twoints * positions, twoints * positionsBucket, double * migRatesPair, double totalRate);
 void SuperConfig_index_to_positions(int32_t idx, SuperConfig * super, twoints * positions);
 int32_t SuperConfig_calculate_num_row_entries_(twoints * positions, int32_t configLength);
 void SuperConfig_free(SuperConfig * config);
