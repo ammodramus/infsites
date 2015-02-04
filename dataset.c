@@ -136,12 +136,11 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
 				deriv.positions[i] += 1;
 				for(k = 0; k < ds->numThetas; k++)
 				{
-					REPORTF(ds->thetas[k]);
+					//REPORTF(ds->thetas[k]);
 					transitionProb =  (double)((n+1.0)*n)/(double)((ntotCoal)*ds->thetas[k] + ntotCoal*(ntotCoal-1.0));
-					REPORTF(transitionProb);
+					//REPORTF(transitionProb);
 					deriv.probs[k] = curConfig->probs[k] * transitionProb;
 				}
-				printf("\n");
 				//fprintf(stdout, "Coalescing : curConfig->prob = %f, transitionProb = %f\n", curConfig->prob, transitionProb);
 				if(nunsat == 0 && nref == deriv.positions[i]) 	// check for completion
 					deriv.active[i] = 0;

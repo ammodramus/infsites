@@ -95,24 +95,18 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	}
 	// now read thetas
 	int32_t numThetas = argc - optind;
-	printf("numThetas = %i\n", numThetas);
 	double * thetas = (double *)calloc((size_t)numThetas, sizeof(double));
 	CHECKPOINTER(thetas);
 	opt->thetas = thetas;
 	opt->numThetas = numThetas;
 	int32_t thetaIdx = 0;
-	REPORTI(optind);
 	for(i = optind; i < argc; i++)
 	{
-		REPORTI(i);
-		printf("argv[%i]: %s\n", i, argv[i]);
-		opt->thetas[thetaIdx] = (double)atof(argv[i]);
-		REPORTI(thetaIdx);
-		REPORTF(opt->thetas[thetaIdx]);
-		//success = (int)sscanf(argv[i], "%lf", &(opt->thetas[thetaIdx]));
-		thetaIdx++;
+		//printf("argv[%i]: %s\n", i, argv[i]);
+		success = (int)sscanf(argv[i], "%lf", &(opt->thetas[thetaIdx]));
 		if(!success)
-			PERROR("Failure to read thetas.");
+			PERROR("Could not read theta in parsing options.");
+		thetaIdx++;
 	}
 
 	if(strlen(opt->filenameIn) == 0)
@@ -213,13 +207,7 @@ void SolverOptions_run_program(SolverOptions * opt)
 	if(opt->numDemes == 2)
 		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->migRates);
 	else if(opt->numDemes == 1)
-	{
-		printf("\n");
-		REPORTF(opt->thetas[0]);
-		REPORTF(opt->thetas[1]);
-		printf("\n");
 		solve_D1(opt->fin, opt->numThetas, opt->thetas);
-	}
 	return;
 }
 
