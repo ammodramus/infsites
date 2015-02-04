@@ -43,7 +43,10 @@ void Solver_print_usage()
 
 void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt)
 {
-	int c, i, optionIndex, success;
+	int32_t c, i, optionIndex, success, numThetas, thetaIdx, thetaFileProvided = 0;
+	char ch;
+	FILE * thetain;
+	double * thetas;
 	opt->migRates[0] = opt->migRates[1] = -1.0;
 	opt->numDemes = -1;
 	strcpy(opt->filenameIn, "");
@@ -67,13 +70,6 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				if(success == 0)
 					PERROR("Invalid input for number of demes (--numdemes, -D)");
 				break;
-			/*
-			case 't':
-				success = (int)sscanf(optarg, "%lf", &(opt->theta));
-				if(success == 0)
-					PERROR("Invalid input for theta (--theta, -t)");
-				break;
-			*/
 			case 'M':
 				success = (int)sscanf(optarg, "%lf %lf", &(opt->migRates[0]), &(opt->migRates[1]));
 				if(success != 2)
@@ -83,7 +79,36 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				strncpy(opt->filenameOut, optarg, sizeof(opt->filenameOut));
 				break;
 			case 1:
-				// deal with theta file
+				thetaFileProvided = 1;
+				// deal with theta-file
+				thetain = fopen(optarg, "r");
+				if(!thetain)
+				{
+					fprintf(stderr, "Could not open %s for reading theta parameters.\n", optarg);
+					exit(1);
+				}
+				// count number of lines/theta parameters
+				numThetas = 0;
+				while(!feof(thetain))
+				{
+					ch = fgetc(thetain);
+					if(ch == '\n')
+						numThetas++;
+				}
+				fseek(thetain, SEEK_SET, 0);
+				thetas = (double *)calloc((size_t)numThetas, sizeof(double));
+				CHECKPOINTER(thetas);
+				// back to beginning of file to set theta parameters
+				char * line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+				CHECKPOINTER(line);
+				thetaIdx = 0;
+				while(fgets(line, DEFAULT_MAX_LINE_SIZE, thetain) != NULL)
+				{
+					success = sscanf(line, "%lf\n", &(thetas[thetaIdx++]));
+					if(!success)
+						PERROR("Invalid theta in theta-file.");
+				}
+				free(line);
 				break;
 			case 2:
 				// deal with migration-rate file
@@ -93,21 +118,24 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				break;
 		}
 	}
-	// now read thetas
-	int32_t numThetas = argc - optind;
-	double * thetas = (double *)calloc((size_t)numThetas, sizeof(double));
-	CHECKPOINTER(thetas);
+	if(!thetaFileProvided)
+	{
+		// now read thetas
+		numThetas = argc - optind;
+		thetas = (double *)calloc((size_t)numThetas, sizeof(double));
+		CHECKPOINTER(thetas);
+		thetaIdx = 0;
+		for(i = optind; i < argc; i++)
+		{
+			//printf("argv[%i]: %s\n", i, argv[i]);
+			success = (int)sscanf(argv[i], "%lf", &(opt->thetas[thetaIdx]));
+			if(!success)
+				PERROR("Could not read theta in parsing options.");
+			thetaIdx++;
+		}
+	}
 	opt->thetas = thetas;
 	opt->numThetas = numThetas;
-	int32_t thetaIdx = 0;
-	for(i = optind; i < argc; i++)
-	{
-		//printf("argv[%i]: %s\n", i, argv[i]);
-		success = (int)sscanf(argv[i], "%lf", &(opt->thetas[thetaIdx]));
-		if(!success)
-			PERROR("Could not read theta in parsing options.");
-		thetaIdx++;
-	}
 
 	if(strlen(opt->filenameIn) == 0)
 		PERROR("No input file specified");
