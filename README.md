@@ -11,9 +11,10 @@ Installation
 Running `make` in this directory will create the `solver` binary. By default,
 the program uses UMFPACK from the
 [SuiteSparse](http://faculty.cse.tamu.edu/davis/suitesparse.html) library for
-matrix factorization. I *think* it still supports the CSPARSE routines
-(included) if you have trouble installing SuiteSparse. `make` can be run with
-various different targets; see Makefile.
+matrix factorization. (To install: `sudo apt-get install libsuitesparse-dev` in
+Ubuntu) I *think* it still supports the CSPARSE routines (included) if you have
+trouble installing SuiteSparse. `make` can be run with various targets; see
+Makefile.
 
 Usage
 -----
