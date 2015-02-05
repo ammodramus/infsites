@@ -164,10 +164,7 @@ void SuperConfig_fill_out_matrices(SuperConfig * super, double * thetas, double 
 		SuperConfig_index_to_positions(idx, super, positions);
 		nz += SuperConfig_calculate_num_row_entries_(positions, super->configLength);
 	}
-	REPORTI(nz);
 	// allocate matrix with nz...
-	REPORTI(super->numThetas);
-	REPORTI(super->numMigRates);
 	for(k = 0; k < super->numThetas; k++)
 	{
 		theta = thetas[k];
