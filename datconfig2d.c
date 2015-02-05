@@ -103,12 +103,14 @@ void SuperConfig_init_static(SuperConfig * super, int32_t * numChildren, int32_t
 {
 	int32_t i;
 	super->configLength = configLength;
+	super->numThetas = numThetas;
+	super->numMigRates = numMigRates;
 	DatConfig_init(&(super->panmictic), configLength, numChildren, numThetas);
 	super->positionMultipliers = (int32_t *)calloc(configLength, sizeof(int32_t));
 	CHECKPOINTER(super->positionMultipliers);
 	super->eqs = (SuperEquations **)malloc(sizeof(SuperEquations *) * numThetas);
 	CHECKPOINTER(super->eqs);
-	for(i = 0; i < numMigRates; i++)
+	for(i = 0; i < numThetas; i++)
 	{
 		super->eqs[i] = (SuperEquations *)malloc(sizeof(SuperEquations) * numMigRates);
 		CHECKPOINTER(super->eqs[i]);
@@ -256,6 +258,10 @@ void SuperConfig_free(SuperConfig * config)
 
 void SuperConfig_free_static(SuperConfig * config)
 {
+	int32_t i;
+	for(i = 0; i < config->numThetas; i++)
+		free(config->eqs[i]);
+	free(config->eqs);
 	DatConfig_free(&(config->panmictic));
 	free(config->positionMultipliers);
 	return;
