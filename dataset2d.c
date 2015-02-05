@@ -25,7 +25,6 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	ds->numThetas = numThetas;
 	ds->migRates = migRates;
 	ds->numMigRates = numMigRates;
-	// TODO here.
 
 	ds->collection[0] = (SuperCollection *)malloc(sizeof(SuperCollection));
 	CHECKPOINTER(ds->collection[0]);
@@ -51,21 +50,39 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	NodeList_get_idxToNode(&(ds->nodeList));
 	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_get_ref_config(&(ds->bmat2d->bmat), &(ds->refConfig));
-	DatConfig2d_init(&(ds->refConfig2d), configLength, &(ds->refConfig), (SuperConfig *)NULL); 
+
+	DatConfig2d_init(&(ds->refConfig2d), configLength, &(ds->refConfig), (SuperConfig *)NULL, ds->numThetas, ds->numMigRates); 
 	DatConfig2d_get_ref_datconfig2d(ds->bmat2d, &(ds->refConfig2d));
+
 	DatConfig rootPanmictic;
 	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_set_root_config(&rootPanmictic);
-	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren, ds->numThetas);
-	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren, ds->numThetas);
+
+	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren, ds->numThetas, ds->numMigRates);
+	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren, ds->numThetas, ds->numMigRates);
 	SuperCollection_add_SuperConfig(ds->collection[0], &rootPanmictic, ds);
-	ds->collection[0]->superConfigs[0]->configs2d[0]->prob = 1.0;
-	ds->collection[0]->superConfigs[0]->configs2d[1]->prob = 1.0;
+
+	for(i = 0; i < ds->numThetas; i++)
+	{
+		for(j = 0; j < ds->numMigRates; j++)
+		{
+			ds->collection[0]->superConfigs[0]->configs2d[0]->probs[i][j] = 1.0;
+			ds->collection[0]->superConfigs[0]->configs2d[1]->probs[i][j] = 1.0;
+		}
+	}
+
 	for(j = 0; j < numStages-1; j++)
 		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds);
+
 	finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
-	finalProb = ds->collection[!(ds->recipientCollection)]->superConfigs[0]->configs2d[finalIdx]->prob * (double)probMultiplier;
-	printf("%e\n", finalProb);
+	for(i = 0; i < ds->numThetas; i++)
+	{
+		for(j = 0; j < ds->numMigRates; j++)
+		{
+			finalProb = ds->collection[!(ds->recipientCollection)]->superConfigs[0]->configs2d[finalIdx]->probs[i][j] * (double)probMultiplier;
+			printf("%f\t%f\t%e\n", ds->thetas[i],ds->migRates[j], finalProb);
+		}
+	}
 	SuperCollection_reset(ds->collection[!(ds->recipientCollection)]);
 	SuperCollection_reset(ds->collection[(ds->recipientCollection)]);
 	DatConfig_free(&rootPanmictic);
@@ -90,40 +107,35 @@ void DataSet2d_free(DataSet2d * ds)
 
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds)
 {
-	int32_t thetaIdx,migIdx;
 	DataSet2d_transfer_config_collections(donor, recipient, ds);
-	for(thetaIdx = 0; thetaIdx < ds->numThetas; thetaIdx++)
-	{
-		for(migIdx = 0; migIdx < ds->numMigRates; migIdx++)
-		{
-			DataSet2d_link_supercollections(donor, recipient, ds, thetaIdx, migIdx);
-			DataSet2d_solve_equations(recipient);
-		}
-	}
+	DataSet2d_link_supercollections(donor, recipient, ds);
+	DataSet2d_solve_equations(recipient);
 	ds->recipientCollection = !(ds->recipientCollection);
 	return;
 }
 
 void DataSet2d_solve_equations(SuperCollection * collection)
 {
-	int32_t i, j;
-	for(i = 0; i < collection->curNumSuperConfigs; i++)
+	int32_t i, j, k, l;
+	for(k = 0; k < collection->numThetas; k++)
 	{
-		//for(j = 0; j < collection->superConfigs[i]->numConfigs2d; j++)
-		//{
-			//printf("collection->superConfigs[%i]->eq.b[%i] = %f\n", i, j, collection->superConfigs[i]->eq.b[j]);
-		//}
-		SuperEquations_solve(&(collection->superConfigs[i]->eq));
-		for(j = 0; j < collection->superConfigs[i]->numConfigs2d; j++)
+		for(l = 0; l < collection->numMigRates; l++)
 		{
+			for(i = 0; i < collection->curNumSuperConfigs; i++)
+			{
+				SuperEquations_solve(&(collection->superConfigs[i]->eqs[k][l]));
+				for(j = 0; j < collection->superConfigs[i]->numConfigs2d; j++)
+				{
 #ifndef CSPARSECOMPILE
-			//printf("collection->superConfigs[%i]->eq.x[%i] = %f\n", i, j, collection->superConfigs[i]->eq.x[j]);
-			collection->superConfigs[i]->configs2d[j]->prob = collection->superConfigs[i]->eq.x[j];
+					//printf("collection->superConfigs[%i]->eq.x[%i] = %f\n", i, j, collection->superConfigs[i]->eq.x[j]);
+					collection->superConfigs[i]->configs2d[j]->probs[k][l] = collection->superConfigs[i]->eqs[k][l].x[j];
 #endif
 #ifdef CSPARSECOMPILE
-			//printf("collection->superConfigs[%i]->eq.b[%i] = %f\n", i, j, collection->superConfigs[i]->eq.b[j]);
-			collection->superConfigs[i]->configs2d[j]->prob = collection->superConfigs[i]->eq.b[j];   //CSPARSE EDIT
+					//printf("collection->superConfigs[%i]->eq.b[%i] = %f\n", i, j, collection->superConfigs[i]->eq.b[j]);
+					collection->superConfigs[i]->configs2d[j]->probs[k][l] = collection->superConfigs[i]->eqs[k][l].b[j];   //CSPARSE EDIT
 #endif
+				}
+			}
 		}
 	}
 	return;
@@ -213,9 +225,9 @@ void DataSet2d_transfer_config_collections(SuperCollection * donor, SuperCollect
 }
 
 // *linking probabilities* doesn't require the duplication of DatConfig2d's... just the 2d-positions.
-void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx)
+void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipient, DataSet2d * ds)
 {
-	int32_t i, j, k, n, n0, n1, ntot, ntot0, ntot1, ntotCoal, ntotCoal0, ntotCoal1, nref, nunsat, curNumChildren, mutIdx, lingering, twoDemeIdx;
+	int32_t i, j, k, thetaIdx, migRateIdx, n, n0, n1, ntot, ntot0, ntot1, ntotCoal, ntotCoal0, ntotCoal1, nref, nunsat, curNumChildren, mutIdx, lingering, twoDemeIdx;
 	int32_t configLength = config->panmictic->length;
 	int32_t * numChildren = config->panmictic->numChildren;
 	double totalRate, transitionProb;
@@ -275,25 +287,15 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 						PERROR("superConfig not found.");
 					}
 					twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
-					totalRate = (ntotCoal)*ds->theta + ntotCoal0*(ntotCoal0-1.0) + ntot1*(ntot1-1.0) + ntotCoal0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
-					//printf("\ncoalescence information (deme 0)\n");
-					//REPORTI(ntotCoal);
-					//REPORTI(ntotCoal0);
-					//REPORTI(ntotCoal1);
-					//REPORTF(ds->theta);
-					//REPORTF(ds->migRatesPair[0]);
-					//REPORTF(ds->migRatesPair[1]);
-					//REPORTF(totalRate);
-					//printf("totalRate = %i*%f + %i*(%i-1) + %i*(%i-1) + %i*%f + %i*%f = %f\n",
-							//ntotCoal, ds->theta, ntotCoal0, ntotCoal0, ntot1, ntot1, ntotCoal0, ds->migRatesPair[0], ntot1, ds->migRatesPair[1], totalRate);
-					//REPORTI(n0);
-					// n.b. in the following line (n0+1.0)*n0 is the same as n0Coal*(n0Coal-1)
-					transitionProb = (n0+1.0)*n0 / totalRate;
-					//printf("coalescence transition prob = %f, multiplied by config->prob = %f\n", transitionProb, config->prob);
-					//printf("\n\n");
-					//superConfig->configs2d[twoDemeIdx]->prob += transitionProb;
-					//superConfig->eq.b[twoDemeIdx] += transitionProb;
-					superConfig->eq.b[twoDemeIdx] += transitionProb * config->prob;
+					for(thetaIdx = 0; thetaIdx < superConfig->numThetas; thetaIdx++)
+					{
+						for(migRateIdx = 0; migRateIdx < superConfig->numMigRates; migRateIdx++)
+						{
+							totalRate = (ntotCoal)*ds->thetas[thetaIdx] + ntotCoal0*(ntotCoal0-1.0) + ntot1*(ntot1-1.0) + ntotCoal0*ds->migRates[migRateIdx] + ntot1*ds->migRates[migRateIdx];
+							transitionProb = (n0+1.0)*n0 / totalRate;
+							superConfig->eqs[thetaIdx][migRateIdx].b[twoDemeIdx] += transitionProb * config->probs[thetaIdx][migRateIdx];
+						}
+					}
 				}
 				/////////////
 				// MUTATION 0
@@ -333,12 +335,15 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 								}
 								twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
 								//totalRate = (ntotCoal)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
-								totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
-								//transitionProb = n0 * ds->theta / totalRate;
-								transitionProb = ds->theta / totalRate;
-								//printf("mutation transition prob = %f, multiplied by config->prob = %f\n", transitionProb, config->prob);
-								//superConfig->eq.b[twoDemeIdx] += transitionProb;
-								superConfig->eq.b[twoDemeIdx] += transitionProb * config->prob;
+								for(thetaIdx = 0; thetaIdx < superConfig->numThetas; thetaIdx++)
+								{
+									for(migRateIdx = 0; migRateIdx < superConfig->numMigRates; migRateIdx++)
+									{
+										totalRate = (ntot)*ds->thetas[thetaIdx] + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRates[migRateIdx] + ntot1*ds->migRates[migRateIdx];
+										transitionProb = ds->thetas[thetaIdx] / totalRate;
+										superConfig->eqs[thetaIdx][migRateIdx].b[twoDemeIdx] += transitionProb * config->probs[thetaIdx][migRateIdx];
+									}
+								}
 							}
 						}
 					}
@@ -370,25 +375,16 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 							SuperConfig_print(ds->collection[ds->recipientCollection]->superConfigs[j], stdout);
 						PERROR("superConfig not found.");
 					}
-					totalRate = (ntotCoal)*ds->theta + ntot0*(ntot0-1.0) + ntotCoal1*(ntotCoal1-1.0) + ntot0*ds->migRatesPair[0] + ntotCoal1*ds->migRatesPair[1];
-					//printf("\ncoalescence information (deme 1)\n");
-					//REPORTI(ntotCoal);
-					//REPORTI(ntotCoal0);
-					//REPORTI(ntotCoal1);
-					//REPORTF(ds->theta);
-					//REPORTF(ds->migRatesPair[0]);
-					//REPORTF(ds->migRatesPair[1]);
-					//REPORTF(totalRate);
-					//REPORTI(n1);
-					//printf("totalRate = %i*%f + %i*(%i-1) + %i*(%i-1) + %i*%f + %i*%f = %f\n",
-							//ntotCoal, ds->theta, ntot0, ntot0, ntotCoal1, ntotCoal1, ntot0, ds->migRatesPair[0], ntot1, ds->migRatesPair[1], totalRate);
-					twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
-					transitionProb = (n1+1.0)*n1 / totalRate;
-					//printf("coalescence transition prob = %f, multiplied by config->prob = %f\n", transitionProb, config->prob);
-					//printf("\n\n");
-					//superConfig->configs2d[twoDemeIdx]->prob += transitionProb;
-					//superConfig->eq.b[twoDemeIdx] += transitionProb;
-					superConfig->eq.b[twoDemeIdx] += transitionProb * config->prob;
+					for(thetaIdx = 0; thetaIdx < superConfig->numThetas; thetaIdx++)
+					{
+						for(migRateIdx = 0; migRateIdx < superConfig->numMigRates; migRateIdx++)
+						{
+							totalRate = (ntotCoal)*ds->thetas[thetaIdx] + ntot0*(ntot0-1.0) + ntotCoal1*(ntotCoal1-1.0) + ntot0*ds->migRates[migRateIdx] + ntotCoal1*ds->migRates[migRateIdx];
+							twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
+							transitionProb = (n1+1.0)*n1 / totalRate;
+							superConfig->eqs[thetaIdx][migRateIdx].b[twoDemeIdx] += transitionProb * config->probs[thetaIdx][migRateIdx];
+						}
+					}
 				}
 				/////////////
 				// MUTATION 1
@@ -429,13 +425,15 @@ void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipi
 								twoDemeIdx = SuperConfig_get_index(positions2d, superConfig->positionMultipliers, superConfig->configLength);
 								//totalRate = (ntotCoal)*ds->theta + ntotCoal0*(ntotCoal0-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
 								//totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
-								totalRate = (ntot)*ds->theta + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRatesPair[0] + ntot1*ds->migRatesPair[1];
-								//transitionProb = n1 * ds->theta / totalRate;
-								transitionProb = ds->theta / totalRate;
-								//printf("mutation transition prob = %f, multiplied by config->prob = %f\n", transitionProb, config->prob);
-								//superConfig->configs2d[twoDemeIdx]->prob += transitionProb;
-								//superConfig->eq.b[twoDemeIdx] += transitionProb;
-								superConfig->eq.b[twoDemeIdx] += transitionProb * config->prob;
+								for(thetaIdx = 0; thetaIdx < superConfig->numThetas; thetaIdx++)
+								{
+									for(migRateIdx = 0; migRateIdx < superConfig->numMigRates; migRateIdx++)
+									{
+										totalRate = (ntot)*ds->thetas[thetaIdx] + ntot0*(ntot0-1.0) + ntot1*(ntot1-1.0) + ntot0*ds->migRates[migRateIdx] + ntot1*ds->migRates[migRateIdx];
+										transitionProb = ds->thetas[thetaIdx] / totalRate;
+										superConfig->eqs[thetaIdx][migRateIdx].b[twoDemeIdx] += transitionProb * config->probs[thetaIdx][migRateIdx];
+									}
+								}
 							}
 						}
 					}
@@ -514,19 +512,19 @@ int32_t DataSet2d_get_prob_multiplier(DataSet2d * ds)
 	return mult;
 }
 
-void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx)
+void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds)
 {
 	int32_t i, numConfigs2d = donorConfig->numConfigs2d;
 	for(i = 0; i < numConfigs2d; i++)
-		DataSet2d_link_probabilities(donorConfig->configs2d[i], recipient, ds, thetaIdx, migIdx);
+		DataSet2d_link_probabilities(donorConfig->configs2d[i], recipient, ds);
 	return;
 }
 
-void DataSet2d_link_supercollections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int32_t thetaIdx, int32_t migIdx)
+void DataSet2d_link_supercollections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds)
 {
 	int32_t i, numSuperConfigs = donor->curNumSuperConfigs;
 	for(i = 0; i < numSuperConfigs; i++)
-		DataSet2d_link_datconfig2ds(donor->superConfigs[i], recipient, ds, thetaIdx, migIdx);
+		DataSet2d_link_datconfig2ds(donor->superConfigs[i], recipient, ds);
 	return;
 }
 

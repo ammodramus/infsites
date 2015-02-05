@@ -220,7 +220,7 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, double * migRatesP
 
 	/////////////////////////
 	// testing conditions:
-	double migRates[3];
+	double migRates[3] = {0.4, 1.0, 5.0};
 	int32_t numMigRates = 3;
 	/////////////////////////
 	
