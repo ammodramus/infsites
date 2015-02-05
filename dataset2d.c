@@ -72,7 +72,10 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	}
 
 	for(j = 0; j < numStages-1; j++)
+	{
+		printf("stage %i\n", j);
 		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds);
+	}
 
 	finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
 	for(i = 0; i < ds->numThetas; i++)
@@ -198,10 +201,6 @@ void DataSet2d_donate_deriv_superconfigs(SuperConfig * super, SuperCollection * 
 							deriv.satisfied[i][j] = 1;
 							if(nunsat == 1 && deriv.positions[i] == nref)
 								deriv.active[i] = 0;
-							//fprintf(stdout, "curConfig->prob = %f, transitionProb = %f\n", curConfig->prob, (double)(ds->theta)/(double)(ds->theta + deriv.positions[i]+1.0-1.0));
-							//transitionProb = (double)(ds->theta/2.0)/(double)(ntot * ds->theta/2.0 + ntot*(ntot-1)/2);
-							//fprintf(stdout, "Mutating : curConfig->prob = %f, transitionProb = %f\n", curConfig->prob, transitionProb);
-							//deriv.prob = curConfig->prob * transitionProb;
 							SuperCollection_add_SuperConfig(recipient, &deriv, ds);
 						}
 					}

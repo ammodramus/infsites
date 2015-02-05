@@ -81,14 +81,14 @@ void SuperEquations_solve(SuperEquations * eq)
 	if(status != UMFPACK_OK)
 	{
 		printf("umfpack error status = %i, triplet_to_col conversion error\n", status);
-		PERROR("UMFPACK ERROR.");
+		//PERROR("UMFPACK ERROR.");
 	}
 	// now do symbolic factorization.
 	status = umfpack_di_symbolic(eq->nrows, eq->ncols, eq->Ap, eq->Ai, eq->Ax, &(eq->symbolic), (double *)NULL, (double *)NULL);
 	if(status != UMFPACK_OK)
 	{
 		printf("umfpack error status = %i, symbolic factorization error\n", status);
-		PERROR("UMFPACK ERROR.");
+		//PERROR("UMFPACK ERROR.");
 	}
 
 	// numeric factorization
@@ -96,14 +96,14 @@ void SuperEquations_solve(SuperEquations * eq)
 	if(status != UMFPACK_OK)
 	{
 		printf("umfpack error status = %i, numeric factorization error\n", status);
-		PERROR("UMFPACK ERROR.");
+		//PERROR("UMFPACK ERROR.");
 	}
 	// solving
 	status = umfpack_di_solve(UMFPACK_A, eq->Ap, eq->Ai, eq->Ax, eq->x, eq->b, eq->numeric, (double *)NULL, (double *)NULL);
 	if(status != UMFPACK_OK)
 	{
 		printf("umfpack error status = %i, solving error\n", status);
-		PERROR("UMFPACK ERROR.");
+		//PERROR("UMFPACK ERROR.");
 	}
 	return;
 }

@@ -99,12 +99,20 @@ typedef struct superconfig_
 	struct superconfig_ * next;
 } SuperConfig;
 */
-void SuperConfig_init_static(SuperConfig * super, int32_t * numChildren, int32_t configLength, int32_t numThetas)
+void SuperConfig_init_static(SuperConfig * super, int32_t * numChildren, int32_t configLength, int32_t numThetas, int32_t numMigRates)
 {
+	int32_t i;
 	super->configLength = configLength;
 	DatConfig_init(&(super->panmictic), configLength, numChildren, numThetas);
 	super->positionMultipliers = (int32_t *)calloc(configLength, sizeof(int32_t));
 	CHECKPOINTER(super->positionMultipliers);
+	super->eqs = (SuperEquations **)malloc(sizeof(SuperEquations *) * numThetas);
+	CHECKPOINTER(super->eqs);
+	for(i = 0; i < numMigRates; i++)
+	{
+		super->eqs[i] = (SuperEquations *)malloc(sizeof(SuperEquations) * numMigRates);
+		CHECKPOINTER(super->eqs[i]);
+	}
 	return;
 }
 
@@ -123,6 +131,8 @@ void SuperConfig_init(SuperConfig * super, DatConfig * panmictic, DataSet2d * ds
 	super->numChildren = numChildren;
 	super->numConfigs2d = SuperConfig_get_num_configs2d(positions, configLength);
 	super->configs2d = (DatConfig2d **)malloc(sizeof(DatConfig2d *) * (size_t)(super->numConfigs2d));
+	super->numThetas = ds->numThetas;
+	super->numMigRates = ds->numMigRates;
 	CHECKPOINTER(super->configs2d);
 	for(i = 0; i < super->numConfigs2d; i++)
 	{
@@ -154,7 +164,10 @@ void SuperConfig_fill_out_matrices(SuperConfig * super, double * thetas, double 
 		SuperConfig_index_to_positions(idx, super, positions);
 		nz += SuperConfig_calculate_num_row_entries_(positions, super->configLength);
 	}
+	REPORTI(nz);
 	// allocate matrix with nz...
+	REPORTI(super->numThetas);
+	REPORTI(super->numMigRates);
 	for(k = 0; k < super->numThetas; k++)
 	{
 		theta = thetas[k];
@@ -609,7 +622,7 @@ void SuperCollection_init(SuperCollection * collection, int32_t configLength, in
 	{
 		collection->superConfigs[i] = (SuperConfig *)malloc(sizeof(SuperConfig));
 		CHECKPOINTER(collection->superConfigs[i]);
-		SuperConfig_init_static(collection->superConfigs[i], numChildren, configLength, numThetas);
+		SuperConfig_init_static(collection->superConfigs[i], numChildren, configLength, numThetas, numMigRates);
 	}
 	HashSuper_init(&(collection->hashSuper), configLength);
 	return;
@@ -647,7 +660,7 @@ void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t
 		collection->superConfigs[i] = (SuperConfig *)malloc(sizeof(SuperConfig));
 		CHECKPOINTER(collection->superConfigs);
 		// TODO: getting configLength from the first superConfigs is kind of sloppy.
-		SuperConfig_init_static(collection->superConfigs[i], collection->numChildren, collection->superConfigs[0]->configLength, numThetas);
+		SuperConfig_init_static(collection->superConfigs[i], collection->numChildren, collection->superConfigs[0]->configLength, numThetas, collection->numMigRates);
 	}
 	collection->maxNumSuperConfigs = newNumSuperConfigs;
 	return;
