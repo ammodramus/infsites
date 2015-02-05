@@ -17,7 +17,8 @@ typedef struct solveroptions_
 	int32_t numDemes;
 	double * thetas;
 	int32_t numThetas;
-	double migRatesPair[2];
+	double * migRates;
+	int32_t numMigRates;
 	FILE * fin;
 	FILE * fout;
 } SolverOptions;
@@ -43,11 +44,10 @@ void Solver_print_usage()
 
 void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt)
 {
-	int32_t c, i, optionIndex, success, numThetas, thetaIdx, thetaFileProvided = 0;
-	char ch;
-	FILE * thetain;
-	double * thetas;
-	opt->migRatesPair[0] = opt->migRatesPair[1] = -1.0;
+	int32_t c, i, optionIndex, success, numThetas, numMigRates, thetaIdx, migrationIdx, thetaFileProvided = 0, migFileProvided = 0;
+	char ch, * line;
+	FILE * thetain, * migrationin;
+	double * thetas, * migRates;
 	opt->numDemes = -1;
 	strcpy(opt->filenameIn, "");
 	strcpy(opt->filenameOut, "");
@@ -69,11 +69,6 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				success = (int)sscanf(optarg, "%i", &(opt->numDemes));
 				if(success == 0)
 					PERROR("Invalid input for number of demes (--numdemes, -D)");
-				break;
-			case 'M':
-				success = (int)sscanf(optarg, "%lf %lf", &(opt->migRatesPair[0]), &(opt->migRatesPair[1]));
-				if(success != 2)
-					PERROR("Invalid input for migration rates (--migrates, -M)");
 				break;
 			case 'o':
 				strncpy(opt->filenameOut, optarg, sizeof(opt->filenameOut));
@@ -99,7 +94,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				thetas = (double *)calloc((size_t)numThetas, sizeof(double));
 				CHECKPOINTER(thetas);
 				// back to beginning of file to set theta parameters
-				char * line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+				line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
 				CHECKPOINTER(line);
 				thetaIdx = 0;
 				while(fgets(line, DEFAULT_MAX_LINE_SIZE, thetain) != NULL)
@@ -111,7 +106,37 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				free(line);
 				break;
 			case 2:
-				// deal with migration-rate file
+				migFileProvided = 1;
+				// deal with theta-file
+				migrationin = fopen(optarg, "r");
+				if(!migrationin)
+				{
+					fprintf(stderr, "Could not open %s for reading migration parameters.\n", optarg);
+					exit(1);
+				}
+				// count number of lines/migration parameters
+				numMigRates = 0;
+				while(!feof(migrationin))
+				{
+					ch = fgetc(migrationin);
+					if(ch == '\n')
+						numMigRates++;
+				}
+				REPORTI(numMigRates);
+				fseek(migrationin, SEEK_SET, 0);
+				migRates = (double *)calloc((size_t)numMigRates, sizeof(double));
+				CHECKPOINTER(migRates);
+				// back to beginning of file to set migration parameters
+				line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+				CHECKPOINTER(line);
+				migrationIdx = 0;
+				while(fgets(line, DEFAULT_MAX_LINE_SIZE, migrationin) != NULL)
+				{
+					success = sscanf(line, "%lf\n", &(migRates[migrationIdx++]));
+					if(!success)
+						PERROR("Invalid migration in migration-file.");
+				}
+				free(line);
 				break;
 			default:
 				printf("%c\n", c);
@@ -135,8 +160,13 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 			thetaIdx++;
 		}
 	}
+	if(!migFileProvided && opt->numDemes == 2)
+		PERROR("No migration file provided.\n");
 	opt->thetas = thetas;
 	opt->numThetas = numThetas;
+
+	opt->migRates = migRates;
+	opt->numMigRates = numMigRates;
 
 	if(strlen(opt->filenameIn) == 0)
 		PERROR("No input file specified");
@@ -153,11 +183,6 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	}
 	if(opt->numDemes == -1)
 		PERROR("Number of demes not specified (--numdemes, -D)");
-	if(opt->numDemes == 2 && (opt->migRatesPair[0] == -1 || opt->migRatesPair[1] == -1))
-		PERROR("Migration rate not specified (--migrates, -M)");
-	//if(opt->theta == -1.0)
-		//PERROR("Mutation rate not specified (--theta, -t)");
-	//free(thetas);
 	return;
 }
 
@@ -211,21 +236,12 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 	return;
 }
 
-// still need to change this
-void solve_D2(FILE * fin, int32_t numThetas, double * thetas, double * migRates)
+void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates)
 {
 	BMat2d b2;
 	DataSet2d ds;
 	int32_t k;
 
-	/////////////////////////
-	// testing conditions:
-	double testMigRates[3] = {0.4, 1.0, 5.0};
-	int32_t numMigRates = 3;
-	/////////////////////////
-	
-	migRates = testMigRates;
-	
 	// to make probabilities maximally compatible with genetree, which defines
 	// theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu.
 	for(k = 0; k < numThetas; k++)
@@ -233,32 +249,18 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, double * migRates)
 	BMat2d_read_input(fin, &b2);
 	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates);
 	BMat2d_free(&b2);
+	// TODO fix this
 	free(thetas);
-	// to implement after testing conditions:
-	//free(migRates)
+	free(migRates);
 	return;
 }
 
 void SolverOptions_run_program(SolverOptions * opt)
 {
 	if(opt->numDemes == 2)
-		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->migRatesPair);
+		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates);
 	else if(opt->numDemes == 1)
 		solve_D1(opt->fin, opt->numThetas, opt->thetas);
-	return;
-}
-
-void SolverOptions_report_options(SolverOptions * opt)
-{
-	int32_t k;
-	REPORTI(opt->numDemes);
-	//REPORTF(opt->theta);
-	for(k = 0; k < opt->numThetas; k++)
-		REPORTF(opt->thetas[k]);
-	REPORTF(opt->migRatesPair[0]);
-	REPORTF(opt->migRatesPair[1]);
-	printf("input: %s\n", opt->filenameIn);
-	printf("output: %s\n", opt->filenameOut);
 	return;
 }
 
