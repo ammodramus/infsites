@@ -122,7 +122,6 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 					if(ch == '\n')
 						numMigRates++;
 				}
-				REPORTI(numMigRates);
 				fseek(migrationin, SEEK_SET, 0);
 				migRates = (double *)calloc((size_t)numMigRates, sizeof(double));
 				CHECKPOINTER(migRates);
