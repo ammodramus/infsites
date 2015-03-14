@@ -190,6 +190,7 @@ int32_t check_mono_D1(FILE * inp)
 	char line[DEFAULT_MAX_LINE_SIZE];
 	if(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) == NULL)
 		return -1;
+	rewind(inp);
 	unsigned char c;
 	int32_t numLines = 0;
 	while(1)
