@@ -70,7 +70,7 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	for(k = 0; k < ds->numThetas; k++)
 	{
 		finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst], k) * (double)probMultiplier;
-		fprintf(stdout, "%e\n", finalProb);
+		fprintf(stdout, "%.16e\n", finalProb);
 	}
 
 	// freeing memory

@@ -28,10 +28,8 @@ static struct option long_options[] =
 	{"help", no_argument, 0, 'h'},
 	{"input", required_argument, 0, 'i'},
 	{"numdemes", required_argument, 0, 'D'},
-	{"theta",  required_argument, 0, 't'},
-	{"migrate", required_argument, 0, 'M'},
-	{"theta-file", required_argument, 0, 1},
-	{"migration-file", required_argument, 0, 2},
+	{"theta-file", required_argument, 0, 't'},
+	{"migration-file", required_argument, 0, 'M'},
 	{"output", required_argument, 0, 'o'},
 	{0, 0, 0, 0}
 };
@@ -73,7 +71,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 			case 'o':
 				strncpy(opt->filenameOut, optarg, sizeof(opt->filenameOut));
 				break;
-			case 1:
+			case 't':
 				thetaFileProvided = 1;
 				// deal with theta-file
 				thetain = fopen(optarg, "r");
@@ -105,7 +103,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				}
 				free(line);
 				break;
-			case 2:
+			case 'M':
 				migFileProvided = 1;
 				// deal with theta-file
 				migrationin = fopen(optarg, "r");
@@ -203,7 +201,8 @@ int32_t check_mono_D1(FILE * inp)
 		if(feof(inp))
 			break;
 	}
-	return numLines+1;    // can't have extra lines at the end.
+	//return numLines+1;    // can't have extra lines at the end.
+	return numLines;    // normal text files end with a \n
 }
 
 void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
@@ -230,7 +229,7 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 			prob = 1.0;
 			for(i = mono-1; i > 0; i--)
 				prob *= (double)i / ((double)i + theta);
-			printf("%e\n", prob);
+			printf("%.16e\n", prob);
 		}
 	}
 	return;

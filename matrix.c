@@ -81,10 +81,10 @@ void SuperEquations_solve(SuperEquations * eq)
 	status = umfpack_di_triplet_to_col(eq->nrows, eq->ncols, eq->nz, eq->Ti, eq->Tj, eq->Tx, eq->Ap, eq->Ai, eq->Ax, (int *)NULL);
 	if(status != UMFPACK_OK)
 	{
-		printf("umfpack error status = %i, triplet_to_col conversion error\n", status);
+		fprintf(stderr, "umfpack error status = %i, triplet_to_col conversion error\n", status);
         for(i = 0; i < eq->nz; i++)
-            printf("A[%i, %i] = %f\n", eq->Ti[i], eq->Tj[i], eq->Tx[i]);
-        printf("\n");
+            fprintf(stderr, "A[%i, %i] = %f\n", eq->Ti[i], eq->Tj[i], eq->Tx[i]);
+        fprintf(stderr, "\n");
 		PERROR("UMFPACK ERROR: umfpack_di_triplet_to_col().");
 	}
 	// now do symbolic factorization.
@@ -106,11 +106,11 @@ void SuperEquations_solve(SuperEquations * eq)
 	status = umfpack_di_solve(UMFPACK_A, eq->Ap, eq->Ai, eq->Ax, eq->x, eq->b, eq->numeric, (double *)NULL, (double *)NULL);
 	if(status != UMFPACK_OK)
 	{
-		printf("umfpack error status = %i, triplet_to_col conversion error\n", status);
+		fprintf(stderr, "umfpack error status = %i, triplet_to_col conversion error\n", status);
         for(i = 0; i < eq->nz; i++)
-            printf("A[%i, %i] = %f\n", eq->Ti[i], eq->Tj[i], eq->Tx[i]);
-        printf("\n");
-		printf("umfpack error status = %i, solving error\n", status);
+            fprintf(stderr, "A[%i, %i] = %f\n", eq->Ti[i], eq->Tj[i], eq->Tx[i]);
+        fprintf(stderr, "\n");
+		fprintf(stderr, "umfpack error status = %i, solving error\n", status);
 		PERROR("UMFPACK ERROR.");
 	}
 	return;

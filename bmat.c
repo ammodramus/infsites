@@ -194,7 +194,6 @@ void BMat_read_input(FILE * inp, BMat * bmat)
 		PERROR("No first line in input.");
 	numSegSites = (int32_t)strlen(line)-1;
 	strcpy(lines[nrows++], line);
-	//fprintf(stdout, "numSegSites = %i\n", numSegSites);
 	while(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) != NULL)
 	{
 		lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);

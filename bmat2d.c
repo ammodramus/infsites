@@ -44,7 +44,7 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 	{
 		lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
 		CHECKPOINTER(lines[nrows]);
-		sscanf(line, "%s %i\n", haplotype, &deme);
+		sscanf(line, "%s %i\n", haplotype, &deme); // *space* between %s and %i
 		if(deme != 0 && deme != 1)
 			PERROR("Non 0/1 deme entry in two-deme input.");
 		strcpy(lines[nrows], haplotype);
