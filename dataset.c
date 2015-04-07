@@ -11,13 +11,11 @@
 //void DataSet_init(DataSet * ds, BMat * inputbmat, double theta)
 void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas)
 {
-	int32_t i,j,k, zeroFirst, numStages, probMultiplier;
-	double finalProb;
+	int32_t i,j, zeroFirst, numStages;
 	ds->bmat = inputbmat;
 	ds->numSegSites = inputbmat->ncols;
 	ds->numSamples = inputbmat->nrows;
 	numStages = ds->numSegSites + ds->numSamples;
-	//ds->theta = theta;
 	ds->numThetas = numThetas;
 	ds->thetas = thetas;
 	ds->collection[0] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
@@ -26,12 +24,12 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	CHECKPOINTER(ds->collection[1]);
 	/* there are one more nodes in the phylogeny than
 	 * segregating sites. */
-	//printf("\nBefore ordering columns\n");
-	//BMat_print(ds->bmat, stdout);
 	BMat_order_columns(ds->bmat);
-	//printf("\nAfter ordering columns\n");
-	//BMat_print(ds->bmat, stdout);
-	probMultiplier = DataSet_get_prob_multiplier(ds->bmat);
+	ds->probMultiplier = (double)DataSet_get_prob_multiplier(ds->bmat);
+
+    // check for and then create a perfect phylogeny according to the
+    // algorithms of Gusfield (1991) "Efficient Algorithms for Inferring
+    // Evolutionary Trees."
 	ds->Lij = (BMat *)malloc(sizeof(BMat));
 	CHECKPOINTER(ds->Lij);
 	BMat_init(ds->Lij, ds->bmat->nrows, ds->bmat->ncols);
@@ -45,14 +43,19 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	if(!BMat_determine_good(ds->bmat, ds->Lij, ds->Lj))
 		PERROR("Data does not conform to infinite-sites mutation model.");
 	NodeList_create_phylogeny(&(ds->nodeList), ds->bmat, ds->Lj);
-	//NodeList_print(&(ds->nodeList), stdout);
 	NodeList_get_num_children(&(ds->nodeList));
 	NodeList_get_idxToNode(&(ds->nodeList));
 	DatConfig_init(&(ds->refConfig), ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_get_ref_config(ds->bmat, &(ds->refConfig));
+
 	DatConfig rootConfig;
 	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_set_root_config(&rootConfig);
+
+    ds->initialNodes = (int32_t *)malloc(sizeof(int32_t) * (size_t)(ds->refConfig.length));
+    CHECKPOINTER(ds->initialNodes);
+    DatConfig_set_initial_node_indices(&ds->refConfig, ds->initialNodes);
+
 	/* initialize the ConfigCollections, and then add the root configuration to
 	 * the first Collection, and off we go! */
 	ConfigCollection_init(ds->collection[0], ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
@@ -62,16 +65,15 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	for(i = 0; i < numStages-1; i++)
 	{
 		DataSet_transfer_config_collections(ds->collection[zeroFirst], ds->collection[!zeroFirst], ds);
-		//printf("stage = %i\n", i);
-		//fprintf(stdout,"ds->collection[%i]->curNumConfigs = %i\n", zeroFirst, ds->collection[zeroFirst]->curNumConfigs);
-		//fprintf(stdout,"ds->collection[%i]->curNumConfigs = %i\n", !zeroFirst, ds->collection[!zeroFirst]->curNumConfigs);
 		zeroFirst = !zeroFirst;
 	}
+    /*
 	for(k = 0; k < ds->numThetas; k++)
 	{
-		finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst], k) * (double)probMultiplier;
+		finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst], k) * (double)ds->probMultiplier;
 		fprintf(stdout, "%.16e\n", finalProb);
 	}
+    */
 
 	// freeing memory
 	ConfigCollection_free(ds->collection[0]);
@@ -80,7 +82,6 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	free(ds->collection[1]);
 	DatConfig_free(&(ds->refConfig));
 	DatConfig_free(&rootConfig);
-	//NodeList_free(&(ds->nodeList));
 	return;
 }
 
@@ -93,12 +94,44 @@ void DataSet_free(DataSet * ds)
 	return;
 }
 
+void DataSet_print_good_probabilities(ConfigCollection * collection, DataSet * ds)
+{
+    int32_t i, k, good;
+    DatConfig * config;
+    for(i = 0; i < collection->curNumConfigs; i++)
+    {
+        config = collection->configs[i];
+        good = 1;
+        for(k = 0; k < config->length; k++)
+        {
+            if( (config->positions[k] > 0 && ds->initialNodes[k] == 0) || (config->positions[k] == 0 && ds->initialNodes[k] == 1) )
+            {
+                good = 0;
+                break;
+            }
+        }
+        if(good)
+        {
+            // must calculate multinomial multiplier for each good DatConfig
+            double probMultiplier = (double)DataSet_get_prob_multiplier2(config);
+            for(k = 0; k < config->length-1; k++)
+                printf("%i ", config->positions[k]);
+            printf("%i; ", config->positions[config->length-1]);
+            for(k = 0; k < ds->numThetas-1; k++)
+                printf("%.16e ", config->probs[k] * probMultiplier);
+            printf("%.16e\n", config->probs[ds->numThetas-1] * probMultiplier);
+        }
+    }
+    return;
+}
+
 void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds)
 {
 	int32_t i;
 	ConfigCollection_reset(recipient);
 	for(i = 0; i < donor->curNumConfigs; i++)
 		DataSet_donate_deriv_configs(donor->configs[i], recipient, ds->nodeList.idxToNode, ds);
+    DataSet_print_good_probabilities(recipient, ds);
 	HashTable_reset(&(donor->hashTable));
 	return;
 }
@@ -145,6 +178,29 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
 				if(nunsat == 0 && nref == deriv.positions[i]) 	// check for completion
 					deriv.active[i] = 0;
 				ConfigCollection_add_config(recipient, &deriv);		// this function adds the probability.
+                
+                /*
+                // check positions, if only the initial positions are filled, print the probability
+                int32_t good = 1;
+                for(k = 0; k < deriv.length; k++)
+                {
+                    if( (deriv.positions[k] > 0 && ds->initialNodes[k] == 0) || (deriv.positions[k] == 0 && ds->initialNodes[k] == 1) )
+                    {
+                        good = 0;
+                        break;
+                    }
+                }
+                if(good)
+                {
+                    for(k = 0; k < deriv.length; k++)
+                        printf("%i ", deriv.positions[k]);
+                    for(k = 0; k < ds->numThetas-1; k++)
+                        printf("%f ", deriv.probs[k] * ds->probMultiplier);
+                    printf("%f\n", deriv.probs[ds->numThetas-1] * ds->probMultiplier);
+                }
+                */
+
+
 			}
 			///////////
 			// MUTATION
@@ -177,6 +233,25 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
 								deriv.probs[k] = curConfig->probs[k] * transitionProb;
 							}
 							ConfigCollection_add_config(recipient, &deriv);
+                            /*
+                            int32_t good = 1;
+                            for(k = 0; k < deriv.length; k++)
+                            {
+                                if( (deriv.positions[k] > 0 && ds->initialNodes[k] == 0) || (deriv.positions[k] == 0 && ds->initialNodes[k] == 1) )
+                                {
+                                    good = 0;
+                                    break;
+                                }
+                            }
+                            if(good)
+                            {
+                                for(k = 0; k < deriv.length; k++)
+                                    printf("%i ", deriv.positions[k]);
+                                for(k = 0; k < ds->numThetas-1; k++)
+                                    printf("%f ", deriv.probs[k] * ds->probMultiplier);
+                                printf("%f\n", deriv.probs[ds->numThetas-1] * ds->probMultiplier);
+                            }
+                            */
 						}
 					}
 				}
@@ -206,6 +281,9 @@ int32_t DataSet_binomial_coeff_(int32_t n, int32_t k)
 	return r;
 }
 
+// these two functions just return the multinomial coefficient of the integers
+// in refconfig->positions.
+
 int32_t DataSet_get_prob_multiplier(BMat * bmat)
 {
 	int32_t i, mult = 1, numRemaining = 0;
@@ -213,13 +291,8 @@ int32_t DataSet_get_prob_multiplier(BMat * bmat)
 	CHECKPOINTER(numDuplicates);
 	int32_t numUnique;
 	BMat_get_haplotype_counts(bmat, numDuplicates, &numUnique);
-	//fprintf(stdout, "numDuplicates: ");
 	for(i = 0; i < numUnique; i++)
-	{
 		numRemaining += numDuplicates[i];
-		//fprintf(stdout, "%i ", numDuplicates[i]);
-	}
-	//fprintf(stdout, "\n");
 	for(i = 0; i < numUnique; i++)
 	{
 		mult *= DataSet_binomial_coeff_(numRemaining, numDuplicates[i]);
@@ -227,4 +300,20 @@ int32_t DataSet_get_prob_multiplier(BMat * bmat)
 	}
 	free(numDuplicates);
 	return mult;
+}
+
+int32_t DataSet_get_prob_multiplier2(DatConfig * refconfig)
+{
+    int32_t i, mult = 1, totalHaps = 0, numRemaining;
+    for(i = 0; i < refconfig->length; i++)
+        totalHaps += refconfig->positions[i];
+    numRemaining = totalHaps;
+    for(i = 0; i < refconfig->length; i++)
+    {
+        if(refconfig->positions[i] == 0)
+            continue;
+        mult *= DataSet_binomial_coeff_(numRemaining, refconfig->positions[i]);
+        numRemaining -= refconfig->positions[i];
+    }
+    return mult;
 }

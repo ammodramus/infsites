@@ -207,7 +207,7 @@ int32_t check_mono_D1(FILE * inp)
 
 void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 {
-	int32_t i, k;
+	int32_t i, j, k;
 	double theta, prob;
 	BMat bmat;
 	int32_t mono = check_mono_D1(fin);
@@ -220,18 +220,27 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 		DataSet_free(&ds);
 		BMat_free(&bmat);
 	}
-	// have to make this deal with multiple thetas as well.
 	else
 	{
-		for(k = 0; k < numThetas; k++)
-		{
-			theta = thetas[k];
-			prob = 1.0;
-			for(i = mono-1; i > 0; i--)
-				prob *= (double)i / ((double)i + theta);
-			printf("%.16e\n", prob);
-		}
-	}
+        for(i = mono; i > 0; i--)
+        {
+            printf("%i; ", i);
+            for(j = 0; j < numThetas-1; j++)
+            {
+                theta = thetas[j];
+                prob = 1.0;
+                for(k = 1; k < i; k++)
+                    prob *= (double)k / ((double)k + theta);
+                printf("%.16e ", prob);
+            }
+            prob = 1.0;
+            theta = thetas[numThetas-1];
+            for(k = 1; k < i; k++)
+                prob *= (double)k / ((double)k + theta);
+            printf("%.16e\n", prob);
+        }
+    }
+	
 	return;
 }
 
@@ -248,7 +257,6 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
 	BMat2d_read_input(fin, &b2);
 	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates);
 	BMat2d_free(&b2);
-	// TODO fix this
 	free(thetas);
 	free(migRates);
 	return;

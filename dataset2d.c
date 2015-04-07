@@ -51,12 +51,18 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_get_ref_config(&(ds->bmat2d->bmat), &(ds->refConfig));
 
+    // get initialNodes
+    ds->initialNodes = (int32_t *)malloc(sizeof(int32_t) * (size_t)(ds->refConfig.length));
+    CHECKPOINTER(ds->initialNodes);
+    DatConfig_set_initial_node_indices(&ds->refConfig, ds->initialNodes);
+
 	DatConfig2d_init(&(ds->refConfig2d), configLength, &(ds->refConfig), (SuperConfig *)NULL, ds->numThetas, ds->numMigRates); 
 	DatConfig2d_get_ref_datconfig2d(ds->bmat2d, &(ds->refConfig2d));
 
 	DatConfig rootPanmictic;
 	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_set_root_config(&rootPanmictic);
+
 
 	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren, ds->numThetas, ds->numMigRates);
 	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren, ds->numThetas, ds->numMigRates);
@@ -111,6 +117,10 @@ void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipie
 	DataSet2d_transfer_config_collections(donor, recipient, ds);
 	DataSet2d_link_supercollections(donor, recipient, ds);
 	DataSet2d_solve_equations(recipient);
+
+    // print good probabilities here
+    //recipient->superConfigs[0]->panmictic->positions
+
 	ds->recipientCollection = !(ds->recipientCollection);
 	return;
 }

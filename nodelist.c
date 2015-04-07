@@ -80,8 +80,6 @@ void NodeList_create_phylogeny(NodeList * nl, BMat * bmat, int32_t * lj)
 	int32_t j, mutIdx = 1, ncols = bmat->ncols;
    	Node * root;
 	Node ** colNodes = (Node **)malloc(sizeof(Node *) * (size_t)ncols);
-	/* TODO: write a wrapper function that does this whole process so that
-	 * initialization can be done outside of this function */
 	NodeList_init(nl, ncols+1);
 	root = NodeList_get_Node(nl);
 	root->size = 0;
@@ -97,8 +95,6 @@ void NodeList_create_phylogeny(NodeList * nl, BMat * bmat, int32_t * lj)
 		else
 			Node_add_relationship(root, colNodes[j], mutIdx++);
 	}
-	//NodeList_print(nl, stdout);
-	//NodeList_free(nl);
 	free(colNodes);
 	return;
 }

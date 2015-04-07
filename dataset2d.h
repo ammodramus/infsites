@@ -29,6 +29,7 @@ typedef struct dataset2d_
 	double * thetas;
 	int32_t numMigRates;
 	double * migRates;
+    int32_t * initialNodes;
 } DataSet2d;
 
 
