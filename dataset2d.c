@@ -114,12 +114,17 @@ void DataSet2d_free(DataSet2d * ds)
 
 void DataSet2d_print_good_probabilities(SuperCollection * recipient, DataSet2d * ds)
 {
-    int32_t i, j, good;
+    int32_t i, j, k, l, good;
     DatConfig * curConfig;
+    SuperConfig * curSuperConfig;
+    DatConfig2d * curConfig2d;
+    int32_t numPositions;
     for(i = 0; i < recipient->curNumSuperConfigs; i++)
     {
-        good = 1;
         curConfig = &(recipient->superConfigs[i]->panmictic);
+        curSuperConfig = recipient->superConfigs[i];
+        numPositions = curConfig->length;
+        good = 1;
         for(j = 0; j < curConfig->length; j++)
         {
             if((curConfig->positions[j] > 0 && ds->initialNodes[j] == 0) || (curConfig->positions[j] == 0 && ds->initialNodes[j] == 1))
@@ -130,7 +135,30 @@ void DataSet2d_print_good_probabilities(SuperCollection * recipient, DataSet2d *
         }
         if(good)
         {
-            // handle the printing of probabilities
+            for(j = 0; j < curConfig->length; j++)
+                printf("%i ", curConfig->positions[j]);
+            printf("\n\n");
+            for(j = 0; j < curSuperConfig->numConfigs2d; j++)
+            {
+                curConfig2d = curSuperConfig->configs2d[j];
+                // print positions; prob for each theta and each migrate
+                for(k = 0; k < numPositions-1; k++)
+                    printf("%i ", curConfig2d->positions[k][0]);
+                printf("%i|", curConfig2d->positions[numPositions-1][0]);
+                for(k = 0; k < numPositions-1; k++)
+                    printf("%i ", curConfig2d->positions[k][1]);
+                printf("%i;", curConfig2d->positions[numPositions-1][1]);
+                for(k = 0; k < ds->numThetas; k++)
+                {
+                    for(l = 0; l < ds->numMigRates; l++)
+                    {
+                        if(k == ds->numThetas-1 && l == ds->numMigRates-1)
+                            printf("%.16e\n", curConfig2d->probs[k][l]);
+                        else
+                            printf("%.16e ", curConfig2d->probs[k][l]);
+                    }
+                }
+            }
         }
     }
     return;
@@ -252,7 +280,6 @@ void DataSet2d_transfer_config_collections(SuperCollection * donor, SuperCollect
 	SuperCollection_reset(recipient);
 	for(i = 0; i < donor->curNumSuperConfigs; i++)
 		DataSet2d_donate_deriv_superconfigs(donor->superConfigs[i], recipient, ds);
-	//REPORTI(recipient->curNumSuperConfigs);
 	HashSuper_reset(&(donor->hashSuper));
 	return;
 }
@@ -543,6 +570,27 @@ int32_t DataSet2d_get_prob_multiplier(DataSet2d * ds)
 	}
 	free(numDuplicates);
 	return mult;
+}
+
+int32_t DataSet2d_get_prob_multiplier2(DatConfig2d * config)
+{
+    int32_t i, j, deme, mult = 1, totalHaps = 0, numRemaining;
+
+    for(deme = 0; deme < 2; deme++)
+    {
+        totalHaps = 0;
+        for(j = 0; j < 2; j++)
+            totalHaps += config->positions[j][deme];
+        numRemaining = totalHaps;
+        for(i = 0; i < config->length; i++)
+        {
+            if(config->positions[i][deme] == 0)
+                continue;
+            mult *= DataSet_binomial_coeff_(numRemaining, config->positions[i][deme]);
+            numRemaining -= config->positions[i][deme];
+        }
+    }
+    return mult;
 }
 
 void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds)

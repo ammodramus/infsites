@@ -44,6 +44,7 @@ void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * re
 void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipient, DataSet2d * ds);
 int32_t DataSet2d_binomial_coeff_(int32_t n, int32_t k);
 int32_t DataSet2d_get_prob_multiplier(DataSet2d * ds);
+int32_t DataSet2d_get_prob_multiplier2(DataSet2d * ds);
 void DataSet2d_donate_deriv_superconfigs(SuperConfig * super, SuperCollection * recipient, DataSet2d * ds);
 
 #endif
