@@ -112,14 +112,40 @@ void DataSet2d_free(DataSet2d * ds)
 	return;
 }
 
+void DataSet2d_print_good_probabilities(SuperCollection * recipient, DataSet2d * ds)
+{
+    int32_t i, j, good;
+    DatConfig * curConfig;
+    for(i = 0; i < recipient->curNumSuperConfigs; i++)
+    {
+        good = 1;
+        curConfig = &(recipient->superConfigs[i]->panmictic);
+        for(j = 0; j < curConfig->length; j++)
+        {
+            if((curConfig->positions[j] > 0 && ds->initialNodes[j] == 0) || (curConfig->positions[j] == 0 && ds->initialNodes[j] == 1))
+            {
+                good = 0;
+                break;
+            }
+        }
+        if(good)
+        {
+            // handle the printing of probabilities
+        }
+    }
+    return;
+}
+
+
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds)
 {
+    int32_t i;
 	DataSet2d_transfer_config_collections(donor, recipient, ds);
 	DataSet2d_link_supercollections(donor, recipient, ds);
 	DataSet2d_solve_equations(recipient);
 
-    // print good probabilities here
-    //recipient->superConfigs[0]->panmictic->positions
+    DataSet2d_print_good_probabilities(recipient, ds);
+
 
 	ds->recipientCollection = !(ds->recipientCollection);
 	return;
