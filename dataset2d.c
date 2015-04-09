@@ -82,7 +82,6 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 
 	finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
 	printf("theta\tM\tprob\n");
-    REPORTI(probMultiplier);
 	for(i = 0; i < ds->numThetas; i++)
 	{
 		for(j = 0; j < ds->numMigRates; j++)
@@ -141,7 +140,6 @@ void DataSet2d_print_good_probabilities(SuperCollection * recipient, DataSet2d *
             {
                 curConfig2d = curSuperConfig->configs2d[j];
                 probMultiplier = (double)DataSet2d_get_prob_multiplier2(curConfig2d);
-                REPORTF(probMultiplier);
                 for(k = 0; k < numPositions-1; k++)
                     printf("%i ", curConfig2d->positions[k][0]);
                 printf("%i|", curConfig2d->positions[numPositions-1][0]);

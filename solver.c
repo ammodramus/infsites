@@ -250,8 +250,12 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
 	DataSet2d ds;
 	int32_t k;
 
-	// to make probabilities maximally compatible with genetree, which defines
-	// theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu.
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    //// to make probabilities maximally compatible with *genetree*, which     /////
+    //// defines theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu. /////
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
 	for(k = 0; k < numThetas; k++)
 		thetas[k] /= 2.0;
 	BMat2d_read_input(fin, &b2);
