@@ -42,10 +42,10 @@ void Solver_print_usage()
 
 void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt)
 {
-	int32_t c, i, optionIndex, success, numThetas, numMigRates, thetaIdx, migrationIdx, thetaFileProvided = 0, migFileProvided = 0;
+	int32_t c, i, optionIndex, success, numThetas = -1, numMigRates = -1, thetaIdx, migrationIdx, thetaFileProvided = 0, migFileProvided = 0;
 	char ch, * line;
 	FILE * thetain, * migrationin;
-	double * thetas, * migRates;
+	double * thetas = NULL, * migRates = NULL;
 	opt->numDemes = -1;
 	strcpy(opt->filenameIn, "");
 	strcpy(opt->filenameOut, "");
