@@ -41,6 +41,7 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 	strcpy(lines[nrows], line);
 	demes[nrows++] = deme;
     int32_t mono = 1;
+    rewind(inp);
 	while(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) != NULL)
 	{
 		lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
