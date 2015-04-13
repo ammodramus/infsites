@@ -1,6 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#ifndef CLUSTER
 #include <suitesparse/umfpack.h>
+#endif
+#ifdef CLUSTER
+#include <umfpack.h>
+#endif
 #include "definitions.h"
 #include "matrix.h"
 
