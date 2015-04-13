@@ -32,15 +32,16 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 	CHECKPOINTER(lines);
 	int32_t * demes = (int32_t *)malloc(sizeof(int32_t) * DEFAULT_MAX_NUM_LINES);
 	CHECKPOINTER(demes);
-	lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
-	CHECKPOINTER(lines[nrows]);
+	//lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+	//CHECKPOINTER(lines[nrows]);
 	if(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) == NULL)
 		PERROR("No first line in input.");
 	sscanf(line, "%s %i\n", haplotype, &deme);
 	numSegSites = (int32_t)strlen(haplotype);
-	strcpy(lines[nrows], line);
-	demes[nrows++] = deme;
+	//strcpy(lines[nrows], line);
+	//demes[nrows++] = deme;
     int32_t mono = 1;
+    free(lines[nrows]);
     rewind(inp);
 	while(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) != NULL)
 	{
