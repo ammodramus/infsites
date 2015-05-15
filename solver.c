@@ -42,7 +42,7 @@ void Solver_print_usage()
 
 void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt)
 {
-	int32_t c, i, optionIndex, success, numThetas = -1, numMigRates = -1, thetaIdx, migrationIdx, thetaFileProvided = 0, migFileProvided = 0;
+	int32_t c, i, optionIndex, success, numThetas = -1, numMigRates = -1, thetaIdx, migrationIdx, thetaFileProvided = 0, migFileProvided = 0, stdinSet = 0;
 	char ch, * line;
 	FILE * thetain, * migrationin;
 	double * thetas = NULL, * migRates = NULL;
@@ -52,7 +52,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	//opt->theta = -1.0;
 	while(1)
 	{
-		c = getopt_long(argc, argv, "hi:D:t:M:o:", long_options, &optionIndex);
+		c = getopt_long(argc, argv, "hi:D:t:M:o:s", long_options, &optionIndex);
 		if(c == -1)
 			break;
 		switch(c)
@@ -135,13 +135,18 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 				}
 				free(line);
 				break;
+            case 's':
+                // stdin input
+                stdinSet = 1;
+                break;
+
 			default:
 				printf("%c\n", c);
-				abort();
+				exit(1);
 				break;
 		}
 	}
-	if(!thetaFileProvided)
+	if(!thetaFileProvided && !stdinSet)
 	{
 		// now read thetas
 		numThetas = argc - optind;
@@ -157,17 +162,99 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 			thetaIdx++;
 		}
 	}
-	if(!migFileProvided && opt->numDemes == 2)
+	if(!migFileProvided && opt->numDemes == 2 && !stdinSet)
 		PERROR("No migration file provided.\n");
+    if((thetaFileProvided || migFileProvided) && stdinSet)
+        PERROR("Cannot provide migration or theta file if reading input from STDIN (-s).");
+    if(stdinSet && opt->numDemes == 1)
+    {
+        // thetas first, then locus
+        char * line;
+        line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+        CHECKPOINTER(line);
+
+        int32_t MAX_NUM_THETAS = 1000;
+        thetas = (double *)malloc(sizeof(double) * MAX_NUM_THETAS);
+        CHECKPOINTER(thetas);
+
+        thetaIdx = 0;
+        while(fgets(line, DEFAULT_MAX_LINE_SIZE, stdin) != NULL)
+        {
+            if(line[0] == '-')
+                break;
+            success = sscanf(line, "%lf\n", &(thetas[thetaIdx++]));
+            if(!success)
+                PERROR("Invalid theta in theta-file.");
+        }
+
+        numThetas = thetaIdx;
+
+        thetas = (double *)realloc(thetas, sizeof(double)*numThetas);
+
+        // locus
+        opt->fin = stdin;
+        free(line);
+    }
+    if(stdinSet && opt->numDemes == 2)
+    {
+        // thetas first, then migration rates, then locus
+        char * line;
+        line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+        CHECKPOINTER(line);
+
+        int32_t MAX_NUM_THETAS = 1000;
+        thetas = (double *)malloc(sizeof(double) * MAX_NUM_THETAS);
+        CHECKPOINTER(thetas);
+
+        thetaIdx = 0;
+        while(fgets(line, DEFAULT_MAX_LINE_SIZE, stdin) != NULL)
+        {
+            if(line[0] == '-')
+                break;
+            success = sscanf(line, "%lf\n", &(thetas[thetaIdx++]));
+            if(!success)
+                PERROR("Invalid theta in theta-file.");
+        }
+
+        numThetas = thetaIdx;
+
+        thetas = (double *)realloc(thetas, sizeof(double)*numThetas);
+
+        // migration rates
+        int32_t MAX_NUM_MIGRATES = 1000;
+
+        migRates = (double *)malloc(sizeof(double) * MAX_NUM_MIGRATES);
+        CHECKPOINTER(migRates);
+
+        int32_t migRateIdx = 0;
+        while(fgets(line, DEFAULT_MAX_LINE_SIZE, stdin) != NULL)
+        {
+            if(line[0] == '-')
+                break;
+            success = sscanf(line, "%lf\n", &(migRates[migRateIdx++]));
+            if(!success)
+                PERROR("Invalid migration rate in input.");
+        }
+
+        numMigRates = migRateIdx;
+
+        migRates = (double *)realloc(migRates, sizeof(double)*numMigRates);
+
+        // locus
+        opt->fin = stdin;
+        free(line);
+    }
+
 	opt->thetas = thetas;
 	opt->numThetas = numThetas;
 
 	opt->migRates = migRates;
 	opt->numMigRates = numMigRates;
 
-	if(strlen(opt->filenameIn) == 0)
+	if(strlen(opt->filenameIn) == 0 && !stdinSet)
 		PERROR("No input file specified");
-	opt->fin = fopen(opt->filenameIn, "r");
+    if(!stdinSet)
+        opt->fin = fopen(opt->filenameIn, "r");
 	if(opt->fin == NULL)
 		PERROR("Cannot open input file");
 	if(strlen(opt->filenameOut) == 0)
@@ -210,19 +297,22 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 	int32_t i, j, k;
 	double theta, prob;
 	BMat bmat;
-	int32_t mono = check_mono_D1(fin);
+	//int32_t mono = check_mono_D1(fin);
+    
+    int32_t numHaplotypes = -1;
+    int32_t mono = BMat_read_input(fin, &bmat, &numHaplotypes);
+
 	if(!mono)
 	{
-		fseek(fin, 0, SEEK_SET);
-		BMat_read_input(fin, &bmat);
 		DataSet ds;
 		DataSet_init(&ds, &bmat, numThetas, thetas);
 		DataSet_free(&ds);
 		BMat_free(&bmat);
 	}
-	else
+	else // mono
 	{
-        for(i = mono; i > 0; i--)
+        BMat_free(&bmat);
+        for(i = numHaplotypes; i > 0; i--)
         {
             printf("%i; ", i);
             for(j = 0; j < numThetas-1; j++)

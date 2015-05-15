@@ -82,6 +82,7 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	free(ds->collection[1]);
 	DatConfig_free(&(ds->refConfig));
 	DatConfig_free(&rootConfig);
+    free(ds->initialNodes);
 	return;
 }
 
@@ -91,6 +92,7 @@ void DataSet_free(DataSet * ds)
 	NodeList_free(&(ds->nodeList));
 	free(ds->Lij);
 	free(ds->Lj);
+    free(ds->thetas);
 	return;
 }
 
