@@ -21,6 +21,7 @@ typedef struct solveroptions_
 	int32_t numMigRates;
 	FILE * fin;
 	FILE * fout;
+    int32_t all;
 } SolverOptions;
 
 static struct option long_options[] =
@@ -47,12 +48,13 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	FILE * thetain, * migrationin;
 	double * thetas = NULL, * migRates = NULL;
 	opt->numDemes = -1;
+    opt->all = 0;
 	strcpy(opt->filenameIn, "");
 	strcpy(opt->filenameOut, "");
 	//opt->theta = -1.0;
 	while(1)
 	{
-		c = getopt_long(argc, argv, "hi:D:t:M:o:s", long_options, &optionIndex);
+		c = getopt_long(argc, argv, "hi:D:t:M:o:sa", long_options, &optionIndex);
 		if(c == -1)
 			break;
 		switch(c)
@@ -139,7 +141,9 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
                 // stdin input
                 stdinSet = 1;
                 break;
-
+            case 'a':
+                opt->all = 1;
+                break;
 			default:
 				printf("%c\n", c);
 				exit(1);
@@ -334,7 +338,7 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 	return;
 }
 
-void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates)
+void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll)
 {
 	BMat2d b2;
 	DataSet2d ds;
@@ -349,7 +353,7 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
 	for(k = 0; k < numThetas; k++)
 		thetas[k] /= 2.0;
 	BMat2d_read_input(fin, &b2);
-	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates);
+	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates, printAll);
 	BMat2d_free(&b2);
 	free(thetas);
 	free(migRates);
@@ -359,7 +363,7 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
 void SolverOptions_run_program(SolverOptions * opt)
 {
 	if(opt->numDemes == 2)
-		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates);
+		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates, opt->all);
 	else if(opt->numDemes == 1)
 		solve_D1(opt->fin, opt->numThetas, opt->thetas);
 	return;

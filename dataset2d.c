@@ -11,7 +11,7 @@
 #include "dataset2d.h"
 #include "hash.h"
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates)
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll)
 {
 	int32_t i,j, numStages, probMultiplier, configLength, finalIdx;
 	double finalProb;
@@ -78,20 +78,21 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	}
 
 	for(j = 0; j < numStages-1; j++)
-		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds);
+		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds, printAll);
 
-    /*
-	finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
-	printf("theta\tM\tprob\n");
-	for(i = 0; i < ds->numThetas; i++)
-	{
-		for(j = 0; j < ds->numMigRates; j++)
-		{
-			finalProb = ds->collection[!(ds->recipientCollection)]->superConfigs[0]->configs2d[finalIdx]->probs[i][j] * (double)probMultiplier;
-			printf("%f\t%f\t%.16e\n", 2.0*ds->thetas[i],ds->migRates[j], finalProb); // 2.0 * because previously divided by 2
-		}
-	}
-    */
+    if(!printAll)
+    {
+        finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
+        printf("theta\tM\tprob\n");
+        for(i = 0; i < ds->numThetas; i++)
+        {
+            for(j = 0; j < ds->numMigRates; j++)
+            {
+                finalProb = ds->collection[!(ds->recipientCollection)]->superConfigs[0]->configs2d[finalIdx]->probs[i][j] * (double)probMultiplier;
+                printf("%f\t%f\t%.16e\n", 2.0*ds->thetas[i],ds->migRates[j], finalProb); // 2.0 * because previously divided by 2
+            }
+        }
+    }
 	SuperCollection_reset(ds->collection[!(ds->recipientCollection)]);
 	SuperCollection_reset(ds->collection[(ds->recipientCollection)]);
 	DatConfig_free(&rootPanmictic);
@@ -165,12 +166,13 @@ void DataSet2d_print_good_probabilities(SuperCollection * recipient, DataSet2d *
 }
 
 
-void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds)
+void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int32_t printAll)
 {
 	DataSet2d_transfer_config_collections(donor, recipient, ds);
 	DataSet2d_link_supercollections(donor, recipient, ds);
 	DataSet2d_solve_equations(recipient);
-    DataSet2d_print_good_probabilities(recipient, ds);
+    if(printAll)
+        DataSet2d_print_good_probabilities(recipient, ds);
 	ds->recipientCollection = !(ds->recipientCollection);
 	return;
 }
