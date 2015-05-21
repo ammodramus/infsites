@@ -8,15 +8,18 @@
 #include "dataset.h"
 #include "hash.h"
 
-void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas, int32_t ordered)
+void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas, int32_t printAll, int32_t ordered)
 {
-	int32_t i,j, zeroFirst, numStages;
+	int32_t i,j,k, zeroFirst, numStages;
 	ds->bmat = inputbmat;
 	ds->numSegSites = inputbmat->ncols;
 	ds->numSamples = inputbmat->nrows;
 	numStages = ds->numSegSites + ds->numSamples;
 	ds->numThetas = numThetas;
 	ds->thetas = thetas;
+
+    ds->printAll = printAll;
+
 	ds->collection[0] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
 	CHECKPOINTER(ds->collection[0]);
 	ds->collection[1] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
@@ -47,6 +50,7 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	DatConfig_init(&(ds->refConfig), ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_get_ref_config(ds->bmat, &(ds->refConfig));
 
+
 	DatConfig rootConfig;
 	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_set_root_config(&rootConfig);
@@ -66,13 +70,21 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 		DataSet_transfer_config_collections(ds->collection[zeroFirst], ds->collection[!zeroFirst], ds);
 		zeroFirst = !zeroFirst;
 	}
-    /*
-	for(k = 0; k < ds->numThetas; k++)
-	{
-		finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst], k) * (double)ds->probMultiplier;
-		fprintf(stdout, "%.16e\n", finalProb);
-	}
-    */
+
+
+    if(!ds->printAll)
+    {
+        if(!ds->ordered)
+            ds->probMultiplier = DataSet_get_prob_multiplier(ds->bmat);
+        else
+            ds->probMultiplier = 1.0;
+        double finalProb;
+        for(k = 0; k < ds->numThetas; k++)
+        {
+            finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst], k) * (double)ds->probMultiplier;
+            fprintf(stdout, "%.16e\n", finalProb);
+        }
+    }
 
 	// freeing memory
 	ConfigCollection_free(ds->collection[0]);
@@ -136,7 +148,8 @@ void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollect
 	ConfigCollection_reset(recipient);
 	for(i = 0; i < donor->curNumConfigs; i++)
 		DataSet_donate_deriv_configs(donor->configs[i], recipient, ds->nodeList.idxToNode, ds);
-    DataSet_print_good_probabilities(recipient, ds);
+    if(ds->printAll)
+        DataSet_print_good_probabilities(recipient, ds);
 	HashTable_reset(&(donor->hashTable));
 	return;
 }

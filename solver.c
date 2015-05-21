@@ -57,7 +57,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	//opt->theta = -1.0;
 	while(1)
 	{
-		c = getopt_long(argc, argv, "hi:D:t:M:o:sa", long_options, &optionIndex);
+		c = getopt_long(argc, argv, "hi:D:t:M:o:saO", long_options, &optionIndex);
 		if(c == -1)
 			break;
 		switch(c)
@@ -302,7 +302,7 @@ int32_t check_mono_D1(FILE * inp)
 	return numLines;    // normal text files end with a \n
 }
 
-void solve_D1(FILE * fin, int32_t numThetas, double * thetas, int32_t ordered)
+void solve_D1(FILE * fin, int32_t numThetas, double * thetas, int32_t printAll, int32_t ordered)
 {
 	int32_t i, j, k;
 	double theta, prob;
@@ -315,32 +315,45 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas, int32_t ordered)
 	if(!mono)
 	{
 		DataSet ds;
-		DataSet_init(&ds, &bmat, numThetas, thetas, ordered);
+		DataSet_init(&ds, &bmat, numThetas, thetas, printAll, ordered);
 		DataSet_free(&ds);
 		BMat_free(&bmat);
 	}
 	else // mono
 	{
         BMat_free(&bmat);
-        for(i = numHaplotypes; i > 0; i--)
+        if(printAll)
         {
-            printf("%i; ", i);
-            for(j = 0; j < numThetas-1; j++)
+            for(i = numHaplotypes; i > 0; i--)
             {
-                theta = thetas[j];
+                printf("%i; ", i);
+                for(j = 0; j < numThetas-1; j++)
+                {
+                    theta = thetas[j];
+                    prob = 1.0;
+                    for(k = 1; k < i; k++)
+                        prob *= (double)k / ((double)k + theta);
+                        printf("%.16e ", prob);
+                }
                 prob = 1.0;
+                theta = thetas[numThetas-1];
                 for(k = 1; k < i; k++)
                     prob *= (double)k / ((double)k + theta);
-                printf("%.16e ", prob);
+                printf("%.16e\n", prob);
             }
-            prob = 1.0;
-            theta = thetas[numThetas-1];
-            for(k = 1; k < i; k++)
-                prob *= (double)k / ((double)k + theta);
-            printf("%.16e\n", prob);
+        }
+        else // !printAll
+        {
+            for(k = 0; k < numThetas; k++)
+            {
+                theta = thetas[k];
+                prob = 1.0;
+                for(i = numHaplotypes-1; i > 0; i--)
+                    prob *= (double)i / ((double)i + theta);
+                printf("%e\n", prob);
+            }
         }
     }
-	
 	return;
 }
 
@@ -371,7 +384,7 @@ void SolverOptions_run_program(SolverOptions * opt)
 	if(opt->numDemes == 2)
 		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates, opt->all, opt->ordered);
 	else if(opt->numDemes == 1)
-		solve_D1(opt->fin, opt->numThetas, opt->thetas, opt->ordered);
+		solve_D1(opt->fin, opt->numThetas, opt->thetas, opt->all, opt->ordered);
 	return;
 }
 
