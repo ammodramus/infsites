@@ -11,7 +11,7 @@
 #include "dataset2d.h"
 #include "hash.h"
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll)
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered)
 {
 	int32_t i,j, numStages, probMultiplier, configLength, finalIdx;
 	double finalProb;
@@ -20,6 +20,8 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	ds->numSamples = inputbmat->nrows;
 	ds->recipientCollection = 1;
 	numStages = ds->numSegSites + ds->numSamples;
+
+    ds->ordered = ordered;
 
 	ds->thetas = thetas;
 	ds->numThetas = numThetas;
@@ -142,7 +144,11 @@ void DataSet2d_print_good_probabilities(SuperCollection * recipient, DataSet2d *
             for(j = 0; j < curSuperConfig->numConfigs2d; j++)
             {
                 curConfig2d = curSuperConfig->configs2d[j];
-                probMultiplier = (double)DataSet2d_get_prob_multiplier2(curConfig2d);
+                if(!ds->ordered)
+                    probMultiplier = (double)DataSet2d_get_prob_multiplier2(curConfig2d);
+                else
+                    probMultiplier = 1.0;
+
                 for(k = 0; k < numPositions-1; k++)
                     printf("%i ", curConfig2d->positions[k][0]);
                 printf("%i|", curConfig2d->positions[numPositions-1][0]);

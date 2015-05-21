@@ -22,6 +22,7 @@ typedef struct solveroptions_
 	FILE * fin;
 	FILE * fout;
     int32_t all;
+    int32_t ordered;
 } SolverOptions;
 
 static struct option long_options[] =
@@ -32,6 +33,7 @@ static struct option long_options[] =
 	{"theta-file", required_argument, 0, 't'},
 	{"migration-file", required_argument, 0, 'M'},
 	{"output", required_argument, 0, 'o'},
+	{"ordered", no_argument, 0, 'O'},
 	{0, 0, 0, 0}
 };
 
@@ -48,6 +50,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	FILE * thetain, * migrationin;
 	double * thetas = NULL, * migRates = NULL;
 	opt->numDemes = -1;
+    opt->ordered = 0;
     opt->all = 0;
 	strcpy(opt->filenameIn, "");
 	strcpy(opt->filenameOut, "");
@@ -144,8 +147,11 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
             case 'a':
                 opt->all = 1;
                 break;
+            case 'O':
+                opt->ordered = 1;
+                break;
 			default:
-				printf("%c\n", c);
+				printf("Bad option: %c\n", c);
 				exit(1);
 				break;
 		}
@@ -296,7 +302,7 @@ int32_t check_mono_D1(FILE * inp)
 	return numLines;    // normal text files end with a \n
 }
 
-void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
+void solve_D1(FILE * fin, int32_t numThetas, double * thetas, int32_t ordered)
 {
 	int32_t i, j, k;
 	double theta, prob;
@@ -309,7 +315,7 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 	if(!mono)
 	{
 		DataSet ds;
-		DataSet_init(&ds, &bmat, numThetas, thetas);
+		DataSet_init(&ds, &bmat, numThetas, thetas, ordered);
 		DataSet_free(&ds);
 		BMat_free(&bmat);
 	}
@@ -338,7 +344,7 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas)
 	return;
 }
 
-void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll)
+void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered)
 {
 	BMat2d b2;
 	DataSet2d ds;
@@ -353,7 +359,7 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
 	for(k = 0; k < numThetas; k++)
 		thetas[k] /= 2.0;
 	BMat2d_read_input(fin, &b2);
-	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates, printAll);
+	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates, printAll, ordered);
 	BMat2d_free(&b2);
 	free(thetas);
 	free(migRates);
@@ -363,9 +369,9 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
 void SolverOptions_run_program(SolverOptions * opt)
 {
 	if(opt->numDemes == 2)
-		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates, opt->all);
+		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates, opt->all, opt->ordered);
 	else if(opt->numDemes == 1)
-		solve_D1(opt->fin, opt->numThetas, opt->thetas);
+		solve_D1(opt->fin, opt->numThetas, opt->thetas, opt->ordered);
 	return;
 }
 

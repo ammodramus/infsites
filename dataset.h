@@ -23,9 +23,10 @@ typedef struct dataset_
 	double * thetas;
     int32_t * initialNodes;
     double probMultiplier;
+    int32_t ordered;
 } DataSet;
 
-void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas);
+void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas, int32_t ordered);
 void DataSet_free(DataSet * ds);
 void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds);
 void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * recipient, Node ** idxToNode, DataSet * ds);

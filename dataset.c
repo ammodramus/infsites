@@ -8,8 +8,7 @@
 #include "dataset.h"
 #include "hash.h"
 
-//void DataSet_init(DataSet * ds, BMat * inputbmat, double theta)
-void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas)
+void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas, int32_t ordered)
 {
 	int32_t i,j, zeroFirst, numStages;
 	ds->bmat = inputbmat;
@@ -25,7 +24,7 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	/* there are one more nodes in the phylogeny than
 	 * segregating sites. */
 	BMat_order_columns(ds->bmat);
-	ds->probMultiplier = (double)DataSet_get_prob_multiplier(ds->bmat);
+    ds->ordered = ordered;
 
     // check for and then create a perfect phylogeny according to the
     // algorithms of Gusfield (1991) "Efficient Algorithms for Inferring
@@ -115,7 +114,11 @@ void DataSet_print_good_probabilities(ConfigCollection * collection, DataSet * d
         if(good)
         {
             // must calculate multinomial multiplier for each good DatConfig
-            double probMultiplier = (double)DataSet_get_prob_multiplier2(config);
+            double probMultiplier;
+            if(!ds->ordered)
+                probMultiplier = (double)DataSet_get_prob_multiplier2(config);
+            else
+                probMultiplier = 1.0;
             for(k = 0; k < config->length-1; k++)
                 printf("%i ", config->positions[k]);
             printf("%i; ", config->positions[config->length-1]);

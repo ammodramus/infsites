@@ -30,10 +30,11 @@ typedef struct dataset2d_
 	int32_t numMigRates;
 	double * migRates;
     int32_t * initialNodes;
+    int32_t ordered;
 } DataSet2d;
 
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll);
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered);
 void DataSet2d_free(DataSet2d * ds);
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int32_t printAll);
 void DataSet2d_solve_equations(SuperCollection * collection);
