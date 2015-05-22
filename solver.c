@@ -34,6 +34,7 @@ static struct option long_options[] =
 	{"migration-file", required_argument, 0, 'M'},
 	{"output", required_argument, 0, 'o'},
 	{"ordered", no_argument, 0, 'O'},
+	{"unordered", no_argument, 0, 'u'},
 	{0, 0, 0, 0}
 };
 
@@ -50,7 +51,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	FILE * thetain, * migrationin;
 	double * thetas = NULL, * migRates = NULL;
 	opt->numDemes = -1;
-    opt->ordered = 0;
+    opt->ordered = 1;
     opt->all = 0;
 	strcpy(opt->filenameIn, "");
 	strcpy(opt->filenameOut, "");
@@ -149,6 +150,9 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
                 break;
             case 'O':
                 opt->ordered = 1;
+                break;
+            case 'u':
+                opt->ordered = 0;
                 break;
 			default:
 				printf("Bad option: %c\n", c);
