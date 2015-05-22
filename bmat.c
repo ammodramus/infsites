@@ -182,7 +182,7 @@ int32_t BMat_determine_good(BMat * bmat, BMat * Lij, int32_t * Lj)
 	return 1;
 }
 
-void BMat_read_input(FILE * inp, BMat * bmat)
+int32_t BMat_read_input(FILE * inp, BMat * bmat, int32_t * numHaplotypes)
 {
 	int32_t i, j, numSegSites, nrows = 0;
 	char line[DEFAULT_MAX_LINE_SIZE];
@@ -194,7 +194,6 @@ void BMat_read_input(FILE * inp, BMat * bmat)
 		PERROR("No first line in input.");
 	numSegSites = (int32_t)strlen(line)-1;
 	strcpy(lines[nrows++], line);
-	//fprintf(stdout, "numSegSites = %i\n", numSegSites);
 	while(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) != NULL)
 	{
 		lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
@@ -202,6 +201,7 @@ void BMat_read_input(FILE * inp, BMat * bmat)
 		strcpy(lines[nrows++], line);
 	}
 	BMat_init(bmat, nrows, numSegSites);
+    int32_t mono = 1;
 	for(i = 0; i < nrows; i++)
 	{
 		for(j = 0; j < numSegSites; j++)
@@ -214,6 +214,8 @@ void BMat_read_input(FILE * inp, BMat * bmat)
 				fprintf(stdout, "%c", lines[i][j]);
 				PERROR("non 0/1 character in input.");
 			}
+            if(lines[i][j] == '1')
+                mono = 0;
 			bmat->mat[i][j] = lines[i][j] - '0';
 		}
 	}
@@ -222,7 +224,8 @@ void BMat_read_input(FILE * inp, BMat * bmat)
 		free(lines[i]);
 	free(lines);
 	fclose(inp);
-	return;
+    *numHaplotypes = nrows;
+	return mono;
 }
 
 /* This is a fairly complicated way of looking at a number of rows of things

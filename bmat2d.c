@@ -32,25 +32,46 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 	CHECKPOINTER(lines);
 	int32_t * demes = (int32_t *)malloc(sizeof(int32_t) * DEFAULT_MAX_NUM_LINES);
 	CHECKPOINTER(demes);
-	lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
-	CHECKPOINTER(lines[nrows]);
+
+    int32_t mono = 1;
+
+    lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+    CHECKPOINTER(lines[nrows]);
+
 	if(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) == NULL)
 		PERROR("No first line in input.");
-	sscanf(line, "%s %i\n", haplotype, &deme);
-	numSegSites = (int32_t)strlen(haplotype);
-	strcpy(lines[nrows], line);
-	demes[nrows++] = deme;
+
+    sscanf(line, "%s %i\n", haplotype, &deme); // *space* between %s and %i
+    numSegSites = (int32_t)strlen(haplotype);
+    if(deme != 0 && deme != 1)
+        PERROR("Non 0/1 deme entry in two-deme input.");
+    strcpy(lines[nrows], haplotype);
+    demes[nrows++] = deme;
+    for(i = 0; i < numSegSites; i++)
+    {
+        if(haplotype[i] == '1')
+            mono = 0;
+    }
+
 	while(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) != NULL)
 	{
 		lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
 		CHECKPOINTER(lines[nrows]);
-		sscanf(line, "%s %i\n", haplotype, &deme);
+		sscanf(line, "%s %i\n", haplotype, &deme); // *space* between %s and %i
 		if(deme != 0 && deme != 1)
 			PERROR("Non 0/1 deme entry in two-deme input.");
 		strcpy(lines[nrows], haplotype);
 		demes[nrows++] = deme;
+        for(i = 0; i < numSegSites; i++)
+        {
+            if(haplotype[i] == '1')
+                mono = 0;
+        }
 	}
-	BMat2d_init(bmat2d, nrows, numSegSites);
+    if(!mono)
+        BMat2d_init(bmat2d, nrows, numSegSites);
+    else // mono (numSegSites-1 because monomorphic sites are inputted as a single column of 0's, which would otherwise be counted as a segregating site)
+        BMat2d_init(bmat2d, nrows, numSegSites-1);
 	for(i = 0; i < nrows; i++)
 	{
 		for(j = 0; j < numSegSites; j++)
@@ -62,6 +83,8 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 				fprintf(stdout, "%c", lines[i][j]);
 				PERROR("non 0/1 character in input.");
 			}
+            if(lines[i][j] == '1')
+                mono = 0;
 			bmat2d->bmat.mat[i][j] = lines[i][j] - '0';
 		}
 		bmat2d->demes[i] = demes[i];

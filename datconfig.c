@@ -137,6 +137,21 @@ void DatConfig_copy_config(DatConfig * df, DatConfig * dfClone)
 	return;
 }
 
+void DatConfig_set_initial_node_indices(DatConfig * config, int32_t * initialNodeIndices)
+{
+    int32_t i;
+    for(i = 0; i < config->length; i++)
+    {
+        if(config->positions[i] > 0)
+            initialNodeIndices[i] = 1;
+        else
+            initialNodeIndices[i] = 0;
+    }
+    return;
+}
+
+
+
 /////////////////////////
 /* HashTable functions */
 /////////////////////////

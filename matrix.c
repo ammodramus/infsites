@@ -1,6 +1,11 @@
 #include <stdlib.h>
 #include <stdio.h>
+#ifndef CLUSTER
 #include <suitesparse/umfpack.h>
+#endif
+#ifdef CLUSTER
+#include <umfpack.h>
+#endif
 #include "definitions.h"
 #include "matrix.h"
 
@@ -75,13 +80,17 @@ void SuperEquations_add_b_value(SuperEquations * eq, double prob, int idx)
  * convert to column form. */
 void SuperEquations_solve(SuperEquations * eq)
 {
+    int i;
 	int status;
 	// convert triplet to column format
 	status = umfpack_di_triplet_to_col(eq->nrows, eq->ncols, eq->nz, eq->Ti, eq->Tj, eq->Tx, eq->Ap, eq->Ai, eq->Ax, (int *)NULL);
 	if(status != UMFPACK_OK)
 	{
-		printf("umfpack error status = %i, triplet_to_col conversion error\n", status);
-		PERROR("UMFPACK ERROR.");
+		fprintf(stderr, "umfpack error status = %i, triplet_to_col conversion error\n", status);
+        for(i = 0; i < eq->nz; i++)
+            fprintf(stderr, "A[%i, %i] = %f\n", eq->Ti[i], eq->Tj[i], eq->Tx[i]);
+        fprintf(stderr, "\n");
+		PERROR("UMFPACK ERROR: umfpack_di_triplet_to_col().");
 	}
 	// now do symbolic factorization.
 	status = umfpack_di_symbolic(eq->nrows, eq->ncols, eq->Ap, eq->Ai, eq->Ax, &(eq->symbolic), (double *)NULL, (double *)NULL);
@@ -102,7 +111,11 @@ void SuperEquations_solve(SuperEquations * eq)
 	status = umfpack_di_solve(UMFPACK_A, eq->Ap, eq->Ai, eq->Ax, eq->x, eq->b, eq->numeric, (double *)NULL, (double *)NULL);
 	if(status != UMFPACK_OK)
 	{
-		printf("umfpack error status = %i, solving error\n", status);
+		fprintf(stderr, "umfpack error status = %i, triplet_to_col conversion error\n", status);
+        for(i = 0; i < eq->nz; i++)
+            fprintf(stderr, "A[%i, %i] = %f\n", eq->Ti[i], eq->Tj[i], eq->Tx[i]);
+        fprintf(stderr, "\n");
+		fprintf(stderr, "umfpack error status = %i, solving error\n", status);
 		PERROR("UMFPACK ERROR.");
 	}
 	return;

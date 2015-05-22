@@ -45,6 +45,7 @@ void DatConfig_print(DatConfig * df, FILE * output, int32_t tabCount);
 void DatConfig_copy_dimensions(DatConfig * df, DatConfig * dfClone);
 void DatConfig_set_root_config(DatConfig * df);
 void DatConfig_copy_config(DatConfig * df, DatConfig * dfClone);
+void DatConfig_set_initial_node_indices(DatConfig * config, int32_t * initialNodeIndices);
 
 void HashTable_init(HashTable * table, int32_t elementLength);
 void HashTable_free(HashTable * table);
