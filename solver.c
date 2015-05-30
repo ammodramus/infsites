@@ -35,6 +35,7 @@ static struct option long_options[] =
 	{"output", required_argument, 0, 'o'},
 	{"ordered", no_argument, 0, 'O'},
 	{"unordered", no_argument, 0, 'u'},
+	{"stdin", no_argument, 0, 's'},
 	{0, 0, 0, 0}
 };
 
