@@ -23,6 +23,7 @@ typedef struct solveroptions_
 	FILE * fout;
     int32_t all;
     int32_t ordered;
+    int32_t genetree;
 } SolverOptions;
 
 static struct option long_options[] =
@@ -35,6 +36,7 @@ static struct option long_options[] =
 	{"output", required_argument, 0, 'o'},
 	{"ordered", no_argument, 0, 'O'},
 	{"unordered", no_argument, 0, 'u'},
+	{"no-genetree", no_argument, 0, 1},
 	{0, 0, 0, 0}
 };
 
@@ -53,6 +55,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	opt->numDemes = -1;
     opt->ordered = 1;
     opt->all = 0;
+    opt->genetree = 1;
 	strcpy(opt->filenameIn, "");
 	strcpy(opt->filenameOut, "");
 	//opt->theta = -1.0;
@@ -153,6 +156,9 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
                 break;
             case 'u':
                 opt->ordered = 0;
+                break;
+            case 1:
+                opt->genetree = 0;
                 break;
 			default:
 				printf("Bad option: %c\n", c);
@@ -361,7 +367,7 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas, int32_t printAll, 
 	return;
 }
 
-void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered)
+void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered, int32_t genetree)
 {
 	BMat2d b2;
 	DataSet2d ds;
@@ -373,10 +379,13 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
     //// defines theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu. /////
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
-	for(k = 0; k < numThetas; k++)
-		thetas[k] /= 2.0;
+    if(genetree)
+    {
+        for(k = 0; k < numThetas; k++)
+            thetas[k] /= 2.0;
+    }
 	BMat2d_read_input(fin, &b2);
-	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates, printAll, ordered);
+	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates, printAll, ordered, genetree);
 	BMat2d_free(&b2);
 	free(thetas);
 	free(migRates);
@@ -386,7 +395,7 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
 void SolverOptions_run_program(SolverOptions * opt)
 {
 	if(opt->numDemes == 2)
-		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates, opt->all, opt->ordered);
+		solve_D2(opt->fin, opt->numThetas, opt->thetas, opt->numMigRates, opt->migRates, opt->all, opt->ordered, opt->genetree);
 	else if(opt->numDemes == 1)
 		solve_D1(opt->fin, opt->numThetas, opt->thetas, opt->all, opt->ordered);
 	return;

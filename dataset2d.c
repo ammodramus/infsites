@@ -11,7 +11,7 @@
 #include "dataset2d.h"
 #include "hash.h"
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered)
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered, int32_t genetree)
 {
 	int32_t i,j, numStages, probMultiplier, configLength, finalIdx;
 	double finalProb;
@@ -82,6 +82,7 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
 	for(j = 0; j < numStages-1; j++)
 		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds, printAll);
 
+    double thetaMultiplier = genetree ? 2.0 : 1.0;
     if(!printAll)
     {
         finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
@@ -91,7 +92,7 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, doubl
             for(j = 0; j < ds->numMigRates; j++)
             {
                 finalProb = ds->collection[!(ds->recipientCollection)]->superConfigs[0]->configs2d[finalIdx]->probs[i][j] * (double)probMultiplier;
-                printf("%f\t%f\t%.16e\n", 2.0*ds->thetas[i],ds->migRates[j], finalProb); // 2.0 * because previously divided by 2
+                printf("%f\t%f\t%.16e\n", thetaMultiplier*ds->thetas[i],ds->migRates[j], finalProb); // 2.0 * because previously divided by 2
             }
         }
     }
