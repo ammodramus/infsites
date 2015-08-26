@@ -16,7 +16,7 @@
                        +(uint32_t)(((const uint8_t *)(d))[0]) )
 #endif
 
-uint32_t SuperFastHash (const char * data, int32_t len)
+uint32_t SuperFastHash (const char * data, int len)
 {
 	uint32_t hash = len, tmp;
 	int rem;
@@ -53,7 +53,7 @@ uint32_t SuperFastHash (const char * data, int32_t len)
     hash += hash >> 17;
     hash ^= hash << 25;
     hash += hash >> 6;
-    return (int32_t)hash;
+    return (int)hash;
 }
 
 uint32_t jenkins_one_at_a_time_hash(char * key, size_t len)

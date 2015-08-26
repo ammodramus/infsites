@@ -17,7 +17,7 @@ void Node_init(Node * node)
 }
 
 // adds numNewNodes to the size of the node's children
-void Node_add_size(Node * node, int32_t numNewNodes)
+void Node_add_size(Node * node, int numNewNodes)
 {
 	node->children = (Node **)realloc((void *)node->children, sizeof(Node *) * (size_t)(node->maxSize + numNewNodes));
 	CHECKPOINTER(node->children);
@@ -26,7 +26,7 @@ void Node_add_size(Node * node, int32_t numNewNodes)
 }
 
 // resets the size of the node's children to newSize
-void Node_resize(Node * node, int32_t newSize)
+void Node_resize(Node * node, int newSize)
 {
 	node->children = (Node **)realloc((void *)node->children, sizeof(Node *) * (size_t)(newSize));
 	CHECKPOINTER(node->children);
@@ -34,7 +34,7 @@ void Node_resize(Node * node, int32_t newSize)
 	return;
 }
 
-void Node_add_relationship(Node * parent, Node * child, int32_t mutIdx)
+void Node_add_relationship(Node * parent, Node * child, int mutIdx)
 {
 	if(parent->size+1 > parent->maxSize)
 		Node_resize(parent, DEFAULT_NODE_INCREASE);
@@ -46,9 +46,9 @@ void Node_add_relationship(Node * parent, Node * child, int32_t mutIdx)
 }
 
 /*
-void Node_insert_node(Node * parent, Node * child, Node * insertNode, int32_t mutIdx)
+void Node_insert_node(Node * parent, Node * child, Node * insertNode, int mutIdx)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < parent->size; i++)
 	{
 		if(parent->children[i] == child)

@@ -8,9 +8,9 @@
 #include "dataset.h"
 #include "hash.h"
 
-void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * thetas, int32_t printAll, int32_t ordered)
+void DataSet_init(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int printAll, int ordered)
 {
-	int32_t i,j,k, zeroFirst, numStages;
+	int i,j,k, zeroFirst, numStages;
 	ds->bmat = inputbmat;
 	ds->numSegSites = inputbmat->ncols;
 	ds->numSamples = inputbmat->nrows;
@@ -38,7 +38,7 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	for(i = 0; i < ds->bmat->nrows; i++)
 		for(j = 0; j < ds->bmat->ncols; j++)
 			ds->Lij->mat[i][j] = BMat_get_Lij(ds->bmat, i, j);
-	ds->Lj = (int32_t *)malloc(sizeof(int32_t) * (size_t)ds->bmat->ncols);
+	ds->Lj = (int *)malloc(sizeof(int) * (size_t)ds->bmat->ncols);
 	CHECKPOINTER(ds->Lj);
 	for(j = 0; j < ds->bmat->ncols; j++)
 		ds->Lj[j] = BMat_get_Lj(ds->bmat, ds->Lij, j);
@@ -55,7 +55,7 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int32_t numThetas, double * th
 	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
 	DatConfig_set_root_config(&rootConfig);
 
-    ds->initialNodes = (int32_t *)malloc(sizeof(int32_t) * (size_t)(ds->refConfig.length));
+    ds->initialNodes = (int *)malloc(sizeof(int) * (size_t)(ds->refConfig.length));
     CHECKPOINTER(ds->initialNodes);
     DatConfig_set_initial_node_indices(&ds->refConfig, ds->initialNodes);
 
@@ -109,7 +109,7 @@ void DataSet_free(DataSet * ds)
 
 void DataSet_print_good_probabilities(ConfigCollection * collection, DataSet * ds)
 {
-    int32_t i, k, good;
+    int i, k, good;
     DatConfig * config;
     for(i = 0; i < collection->curNumConfigs; i++)
     {
@@ -144,7 +144,7 @@ void DataSet_print_good_probabilities(ConfigCollection * collection, DataSet * d
 
 void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds)
 {
-	int32_t i;
+	int i;
 	ConfigCollection_reset(recipient);
 	for(i = 0; i < donor->curNumConfigs; i++)
 		DataSet_donate_deriv_configs(donor->configs[i], recipient, ds->nodeList.idxToNode, ds);
@@ -156,7 +156,7 @@ void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollect
 
 void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * recipient, Node ** idxToNode, DataSet * ds)
 {
-	int32_t i, j, k, n, ntot, ntotCoal, nref, nunsat, numChildren, mutIdx, lingering;
+	int i, j, k, n, ntot, ntotCoal, nref, nunsat, numChildren, mutIdx, lingering;
 	double transitionProb;
 	// TODO: write separate functions for copying dimensions and copying
 	// contents of a DatConfig
@@ -199,7 +199,7 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
                 
                 /*
                 // check positions, if only the initial positions are filled, print the probability
-                int32_t good = 1;
+                int good = 1;
                 for(k = 0; k < deriv.length; k++)
                 {
                     if( (deriv.positions[k] > 0 && ds->initialNodes[k] == 0) || (deriv.positions[k] == 0 && ds->initialNodes[k] == 1) )
@@ -252,7 +252,7 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
 							}
 							ConfigCollection_add_config(recipient, &deriv);
                             /*
-                            int32_t good = 1;
+                            int good = 1;
                             for(k = 0; k < deriv.length; k++)
                             {
                                 if( (deriv.positions[k] > 0 && ds->initialNodes[k] == 0) || (deriv.positions[k] == 0 && ds->initialNodes[k] == 1) )
@@ -280,9 +280,9 @@ void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * reci
 	return;
 }
 
-int32_t DataSet_binomial_coeff_(int32_t n, int32_t k)
+int DataSet_binomial_coeff_(int n, int k)
 {
-	int32_t r = 1, d = n - k;
+	int r = 1, d = n - k;
 	if(d > k)
 	{
 		k = d;
@@ -302,12 +302,12 @@ int32_t DataSet_binomial_coeff_(int32_t n, int32_t k)
 // these two functions just return the multinomial coefficient of the integers
 // in refconfig->positions.
 
-int32_t DataSet_get_prob_multiplier(BMat * bmat)
+int DataSet_get_prob_multiplier(BMat * bmat)
 {
-	int32_t i, mult = 1, numRemaining = 0;
-	int32_t * numDuplicates = (int32_t *)malloc(sizeof(int32_t) * bmat->nrows);
+	int i, mult = 1, numRemaining = 0;
+	int * numDuplicates = (int *)malloc(sizeof(int) * bmat->nrows);
 	CHECKPOINTER(numDuplicates);
-	int32_t numUnique;
+	int numUnique;
 	BMat_get_haplotype_counts(bmat, numDuplicates, &numUnique);
 	for(i = 0; i < numUnique; i++)
 		numRemaining += numDuplicates[i];
@@ -320,9 +320,9 @@ int32_t DataSet_get_prob_multiplier(BMat * bmat)
 	return mult;
 }
 
-int32_t DataSet_get_prob_multiplier2(DatConfig * refconfig)
+int DataSet_get_prob_multiplier2(DatConfig * refconfig)
 {
-    int32_t i, mult = 1, totalHaps = 0, numRemaining;
+    int i, mult = 1, totalHaps = 0, numRemaining;
     for(i = 0; i < refconfig->length; i++)
         totalHaps += refconfig->positions[i];
     numRemaining = totalHaps;

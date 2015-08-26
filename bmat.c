@@ -5,16 +5,16 @@
 #include "definitions.h"
 #include "bmat.h"
 
-void BMat_init(BMat * bmat, int32_t nrows, int32_t ncols)
+void BMat_init(BMat * bmat, int nrows, int ncols)
 {
-	int32_t i, j;
+	int i, j;
 	bmat->nrows = nrows;
 	bmat->ncols = ncols;
-	bmat->mat = (int32_t **)malloc(sizeof(int32_t *) * (size_t)nrows);
+	bmat->mat = (int **)malloc(sizeof(int *) * (size_t)nrows);
 	CHECKPOINTER(bmat->mat);
 	for(i = 0; i < nrows; i++)
 	{
-		bmat->mat[i] = (int32_t *)malloc(sizeof(int32_t) * (size_t)ncols);
+		bmat->mat[i] = (int *)malloc(sizeof(int) * (size_t)ncols);
 		CHECKPOINTER(bmat->mat[i]);
 		for(j = 0; j < ncols; j++)
 			bmat->mat[i][j] = 0;
@@ -25,7 +25,7 @@ void BMat_init(BMat * bmat, int32_t nrows, int32_t ncols)
 /* assumes bmatcopy is a pointer to an uninitialized BMat */
 void BMat_copy_matrix(BMat * bmat, BMat * bmatcopy)
 {
-	int32_t i, j, nrows = bmat->nrows, ncols = bmat->ncols;
+	int i, j, nrows = bmat->nrows, ncols = bmat->ncols;
 	BMat_init(bmatcopy, nrows, ncols);
 	for(i = 0; i < nrows; i++)
 		for(j = 0; j < ncols; j++)
@@ -36,7 +36,7 @@ void BMat_copy_matrix(BMat * bmat, BMat * bmatcopy)
 /* assumes tbmat is a pointer to an uninitialized BMat */
 void BMat_transpose_matrix(BMat * bmat, BMat * tbmat)
 {
-	int32_t i, j, nrows = bmat->nrows, ncols = bmat->ncols;
+	int i, j, nrows = bmat->nrows, ncols = bmat->ncols;
 	BMat_init(tbmat, ncols, nrows);
 	for(i = 0; i < nrows; i++)
 		for(j = 0; j < ncols; j++)
@@ -46,7 +46,7 @@ void BMat_transpose_matrix(BMat * bmat, BMat * tbmat)
 
 void BMat_free(BMat * bmat)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < bmat->nrows; i++)
 		free(bmat->mat[i]);
 	free(bmat->mat);
@@ -55,7 +55,7 @@ void BMat_free(BMat * bmat)
 
 void BMat_print(BMat * bmat, FILE * output)
 {
-	int32_t i, j;
+	int i, j;
 	for(i = 0; i < bmat->nrows; i++)
 	{
 		for(j = 0; j < bmat->ncols; j++)
@@ -67,8 +67,8 @@ void BMat_print(BMat * bmat, FILE * output)
 
 int BMat_int32tcomp_(const void * el1, const void * el2)
 {
-	int v1 = *((int32_t *)el1);
-	int v2 = *((int32_t *)el2);
+	int v1 = *((int *)el1);
+	int v2 = *((int *)el2);
 	if(v1 > v2)
 		return 1;
 	if(v2 > v1)
@@ -76,7 +76,7 @@ int BMat_int32tcomp_(const void * el1, const void * el2)
 	return 0;
 }
 
-int32_t BMat_pow_(int32_t x, int32_t p)
+int BMat_pow_(int x, int p)
 {
 	if (p == 0) return 1;
 	if (p == 1) return x;
@@ -86,13 +86,13 @@ int32_t BMat_pow_(int32_t x, int32_t p)
 	else return x * tmp * tmp;
 }
 
-int32_t BMat_get_column_binary_num_(BMat * bmat, int32_t col)
+int BMat_get_column_binary_num_(BMat * bmat, int col)
 {
-	int32_t i, digit = 0, binNum = 0;
+	int i, digit = 0, binNum = 0;
 	for(i = bmat->nrows-1; i >= 0; i--)
 	{
 		if(bmat->mat[i][col])
-			binNum += BMat_pow_((int32_t)2, digit);
+			binNum += BMat_pow_((int)2, digit);
 		digit++;
 	}
 	return binNum;
@@ -100,9 +100,9 @@ int32_t BMat_get_column_binary_num_(BMat * bmat, int32_t col)
 
 int BMat_compare_columns_(const void * pair1, const void * pair2)
 {
-	int32_t v1, v2;
-	v1 = *(int32_t *)((*(void ***)pair1)[0]);
-	v2 = *(int32_t *)((*(void ***)pair2)[0]);
+	int v1, v2;
+	v1 = *(int *)((*(void ***)pair1)[0]);
+	v2 = *(int *)((*(void ***)pair2)[0]);
 	if(v1 < v2)
 		return 1;
 	if(v2 < v1)
@@ -112,10 +112,10 @@ int BMat_compare_columns_(const void * pair1, const void * pair2)
 
 void BMat_order_columns(BMat * bmat)
 {
-	int32_t i, j;
-	int32_t nrows = bmat->nrows;
-	int32_t ncols = bmat->ncols;
-	int32_t * binNums = (int32_t *)malloc(sizeof(int32_t) * (size_t)ncols);
+	int i, j;
+	int nrows = bmat->nrows;
+	int ncols = bmat->ncols;
+	int * binNums = (int *)malloc(sizeof(int) * (size_t)ncols);
 	CHECKPOINTER(binNums);
 	for(j = 0; j < ncols; j++)
 		binNums[j] = BMat_get_column_binary_num_(bmat, j);
@@ -136,7 +136,7 @@ void BMat_order_columns(BMat * bmat)
 	BMat_init(&bmatordered, nrows, ncols);
 	for(j = 0; j < ncols; j++)
 		for(i = 0; i < nrows; i++)
-			bmatordered.mat[i][j] = ((int32_t *)(numcolpairs[j][1]))[i];
+			bmatordered.mat[i][j] = ((int *)(numcolpairs[j][1]))[i];
 	for(j = 0; j < ncols; j++)
 		for(i = 0; i < nrows; i++)
 			bmat->mat[i][j] = bmatordered.mat[i][j];
@@ -150,19 +150,19 @@ void BMat_order_columns(BMat * bmat)
 	return;
 }
 
-int32_t BMat_get_Lij(BMat * bmat, int32_t i, int32_t j)
+int BMat_get_Lij(BMat * bmat, int i, int j)
 {
-	int32_t k;
+	int k;
 	for(k = j-1; k >= 0; k--)
 		if(bmat->mat[i][k])
 			return k+1;		// assume 1-based indexing.
 	return 0;
 }
 
-int32_t BMat_get_Lj(BMat * bmat, BMat * Lij, int32_t j)
+int BMat_get_Lj(BMat * bmat, BMat * Lij, int j)
 {
-	int32_t i;
-	int32_t Lj = 0;
+	int i;
+	int Lj = 0;
 	for(i = 0; i < bmat->nrows; i++)
 	{
 		if(bmat->mat[i][j])
@@ -172,9 +172,9 @@ int32_t BMat_get_Lj(BMat * bmat, BMat * Lij, int32_t j)
 	return Lj;
 }
 
-int32_t BMat_determine_good(BMat * bmat, BMat * Lij, int32_t * Lj)
+int BMat_determine_good(BMat * bmat, BMat * Lij, int * Lj)
 {
-	int32_t i,j;
+	int i,j;
 	for(i = 0; i < bmat->nrows; i++)
 		for(j = 0; j < bmat->ncols; j++)
 			if(bmat->mat[i][j] && (Lij->mat[i][j] != Lj[j]))
@@ -182,9 +182,9 @@ int32_t BMat_determine_good(BMat * bmat, BMat * Lij, int32_t * Lj)
 	return 1;
 }
 
-int32_t BMat_read_input(FILE * inp, BMat * bmat, int32_t * numHaplotypes)
+int BMat_read_input(FILE * inp, BMat * bmat, int * numHaplotypes)
 {
-	int32_t i, j, numSegSites, nrows = 0;
+	int i, j, numSegSites, nrows = 0;
 	char line[DEFAULT_MAX_LINE_SIZE];
 	char ** lines = (char **)malloc(sizeof(char *) * DEFAULT_MAX_NUM_LINES);
 	CHECKPOINTER(lines);
@@ -192,7 +192,7 @@ int32_t BMat_read_input(FILE * inp, BMat * bmat, int32_t * numHaplotypes)
 	CHECKPOINTER(lines[0]);
 	if(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) == NULL)
 		PERROR("No first line in input.");
-	numSegSites = (int32_t)strlen(line)-1;
+	numSegSites = (int)strlen(line)-1;
 	strcpy(lines[nrows++], line);
 	while(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) != NULL)
 	{
@@ -201,7 +201,7 @@ int32_t BMat_read_input(FILE * inp, BMat * bmat, int32_t * numHaplotypes)
 		strcpy(lines[nrows++], line);
 	}
 	BMat_init(bmat, nrows, numSegSites);
-    int32_t mono = 1;
+    int mono = 1;
 	for(i = 0; i < nrows; i++)
 	{
 		for(j = 0; j < numSegSites; j++)
@@ -242,11 +242,11 @@ int32_t BMat_read_input(FILE * inp, BMat * bmat, int32_t * numHaplotypes)
  * The above BMat would return (2 2 1) for numDuplicates and 3 for *numUnique.
  *
  * numDuplicates is an input parameter, an array that is at least bmat->nrows long.
- * numUnique is an input parameter, the pointer to an int32_t. */
-void BMat_get_haplotype_counts(BMat * bmat, int32_t * numDuplicates, int32_t * numUnique)
+ * numUnique is an input parameter, the pointer to an int. */
+void BMat_get_haplotype_counts(BMat * bmat, int * numDuplicates, int * numUnique)
 {
-	int32_t i, ii, j, same, nrows = bmat->nrows, ncols = bmat->ncols, dupCounter = 0;
-	int32_t * checked = (int32_t *)malloc(sizeof(int32_t) * (size_t)bmat->nrows);
+	int i, ii, j, same, nrows = bmat->nrows, ncols = bmat->ncols, dupCounter = 0;
+	int * checked = (int *)malloc(sizeof(int) * (size_t)bmat->nrows);
 	CHECKPOINTER(checked);
 	//fprintf(stdout, "nrows = %i\n", bmat->nrows);
 	for(i = 0; i < nrows; i++)
@@ -300,9 +300,9 @@ void BMat_get_haplotype_counts(BMat * bmat, int32_t * numDuplicates, int32_t * n
 /*
 int main(int argc, char ** argv)
 {
-	int32_t i,j;
-	int32_t nrows = 4;
-	int32_t ncols = 4;
+	int i,j;
+	int nrows = 4;
+	int ncols = 4;
 	BMat bmat;
 	BMat_init(&bmat, nrows, ncols);
 	bmat.mat[1][1] = 1;
@@ -312,7 +312,7 @@ int main(int argc, char ** argv)
 		bmat.mat[i][3] = bmat.mat[i][0];
 	printf("\nat first\n");
 	BMat_print(&bmat, stdout);
-	int32_t * dupcounts = (int32_t *)malloc(sizeof(int32_t)*(size_t)ncols);
+	int * dupcounts = (int *)malloc(sizeof(int)*(size_t)ncols);
 	CHECKPOINTER(dupcounts);
 	BMat_order_columns(&bmat);
 	printf("\nafter sorting\n");
@@ -331,7 +331,7 @@ int main(int argc, char ** argv)
 		for(j = 0; j < ncols; j++)
 			Lij.mat[i][j] = BMat_get_Lij(&bmat, i, j);
 	printf("\nLij:\n");
-	int32_t * Lj = (int32_t *)malloc(sizeof(int32_t) * (size_t)ncols);
+	int * Lj = (int *)malloc(sizeof(int) * (size_t)ncols);
 	CHECKPOINTER(Lj);
 	for(j = 0; j < ncols; j++)
 	{

@@ -15,9 +15,9 @@
 #include "murmur3.h"
 #include "datconfig2d.h"
 
-void DatConfig2d_init(DatConfig2d * config, int32_t configLength, DatConfig * panmictic, SuperConfig * super, int32_t numThetas, int32_t numMigRates)
+void DatConfig2d_init(DatConfig2d * config, int configLength, DatConfig * panmictic, SuperConfig * super, int numThetas, int numMigRates)
 {
-	int32_t i;
+	int i;
 	config->positions = (twoints *)malloc(sizeof(twoints) * (size_t)configLength);
 	CHECKPOINTER(config->positions);
 	config->panmictic = panmictic;
@@ -38,7 +38,7 @@ void DatConfig2d_init(DatConfig2d * config, int32_t configLength, DatConfig * pa
 
 void DatConfig2d_print(DatConfig2d * config, FILE * output)
 {
-	int32_t i;
+	int i;
 	fprintf(output, "------printing DatConfig2d------\n");
 	fprintf(output, "prob = %f\n", config->prob);
 	fprintf(output, "positions:\n");
@@ -50,7 +50,7 @@ void DatConfig2d_print(DatConfig2d * config, FILE * output)
 
 void DatConfig2d_get_ref_datconfig2d(BMat2d * bmat2d, DatConfig2d * config)
 {
-	int32_t i, j, maxJ, deme;
+	int i, j, maxJ, deme;
 	for(i = 0; i < bmat2d->bmat.ncols+1; i++)
 		config->positions[i][0] = config->positions[i][1] = 0;
 	for(i = 0; i < bmat2d->bmat.nrows; i++)
@@ -72,7 +72,7 @@ void DatConfig2d_get_ref_datconfig2d(BMat2d * bmat2d, DatConfig2d * config)
 
 void DatConfig2d_free(DatConfig2d * config)
 {
-	int32_t i;
+	int i;
 	free(config->positions);
 	for(i = 0; i < config->numThetas; i++)
 		free(config->probs[i]);
@@ -81,32 +81,32 @@ void DatConfig2d_free(DatConfig2d * config)
 }
 
 /* positions is an array for the panmictic configuration, and configLength is the length of the configuration */
-//void SuperConfig_init(SuperConfig * super, int32_t * positions, int32_t * numChildren, int32_t configLength)
+//void SuperConfig_init(SuperConfig * super, int * positions, int * numChildren, int configLength)
 
 /*
 typedef struct superconfig_
 {
 	DatConfig panmictic;
 	DatConfig2d ** configs2d;
-	//int32_t curNumConfigs2d; -- no longer necessary, calculating the index each time.
-	int32_t numConfigs2d;
-	int32_t configLength;
-	int32_t * numChildren;
-	int32_t * positionMultipliers;
-	// array of int32_t's to multiply against, used to get the matrix /
+	//int curNumConfigs2d; -- no longer necessary, calculating the index each time.
+	int numConfigs2d;
+	int configLength;
+	int * numChildren;
+	int * positionMultipliers;
+	// array of int's to multiply against, used to get the matrix /
 	// DatConfig2d array index from a particular DatConfig2d's positions array.
 	SuperEquations eq;
 	struct superconfig_ * next;
 } SuperConfig;
 */
-void SuperConfig_init_static(SuperConfig * super, int32_t * numChildren, int32_t configLength, int32_t numThetas, int32_t numMigRates)
+void SuperConfig_init_static(SuperConfig * super, int * numChildren, int configLength, int numThetas, int numMigRates)
 {
-	int32_t i;
+	int i;
 	super->configLength = configLength;
 	super->numThetas = numThetas;
 	super->numMigRates = numMigRates;
 	DatConfig_init(&(super->panmictic), configLength, numChildren, numThetas);
-	super->positionMultipliers = (int32_t *)calloc(configLength, sizeof(int32_t));
+	super->positionMultipliers = (int *)calloc(configLength, sizeof(int));
 	CHECKPOINTER(super->positionMultipliers);
 	super->eqs = (SuperEquations **)malloc(sizeof(SuperEquations *) * numThetas);
 	CHECKPOINTER(super->eqs);
@@ -120,9 +120,9 @@ void SuperConfig_init_static(SuperConfig * super, int32_t * numChildren, int32_t
 
 void SuperConfig_init(SuperConfig * super, DatConfig * panmictic, DataSet2d * ds)
 {
-	int32_t i, j, configLength = panmictic->length;
-	int32_t * numChildren = panmictic->numChildren;
-	int32_t * positions = panmictic->positions;
+	int i, j, configLength = panmictic->length;
+	int * numChildren = panmictic->numChildren;
+	int * positions = panmictic->positions;
 	for(i = 0; i < configLength; i++)
 	{
 		super->panmictic.positions[i] = positions[i];
@@ -155,7 +155,7 @@ void SuperConfig_init(SuperConfig * super, DatConfig * panmictic, DataSet2d * ds
 void SuperConfig_fill_out_matrices(SuperConfig * super, double * thetas, double * migRates)
 {
 	// nz initialized to numConfigs2d for the diagonal entries, which aren't counted later
-	int32_t j, k, l, idx, n, n0, n1, nz = super->numConfigs2d;
+	int j, k, l, idx, n, n0, n1, nz = super->numConfigs2d;
 	double totalRate, theta, migRate;
 	twoints * positions = (twoints *)calloc(super->configLength, sizeof(twoints));
 	CHECKPOINTER(positions);
@@ -198,9 +198,9 @@ void SuperConfig_fill_out_matrices(SuperConfig * super, double * thetas, double 
 	return;
 }
 
-void SuperConfig_fill_matrix_row(SuperConfig * super, SuperEquations * eq, int32_t rowIdx, twoints * positions, twoints * positionsBucket, double migRate, double totalRate)
+void SuperConfig_fill_matrix_row(SuperConfig * super, SuperEquations * eq, int rowIdx, twoints * positions, twoints * positionsBucket, double migRate, double totalRate)
 {
-	int32_t i, j, deme, colIdx;
+	int i, j, deme, colIdx;
 	double migProb;
 	for(deme = 0; deme < 2; deme++)
 	{
@@ -225,9 +225,9 @@ void SuperConfig_fill_matrix_row(SuperConfig * super, SuperEquations * eq, int32
 	return;
 }
 
-int32_t SuperConfig_calculate_num_row_entries_(twoints * positions, int32_t configLength)
+int SuperConfig_calculate_num_row_entries_(twoints * positions, int configLength)
 {
-	int32_t i, deme, numEntries = 0;
+	int i, deme, numEntries = 0;
 	for(i = 0; i < configLength; i++)
 	{
 		for(deme = 0; deme < 2; deme++)
@@ -243,7 +243,7 @@ int32_t SuperConfig_calculate_num_row_entries_(twoints * positions, int32_t conf
 
 void SuperConfig_free(SuperConfig * config)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < config->numConfigs2d; i++)
 	{
 		DatConfig2d_free(config->configs2d[i]);
@@ -258,7 +258,7 @@ void SuperConfig_free(SuperConfig * config)
 
 void SuperConfig_free_static(SuperConfig * config)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < config->numThetas; i++)
 		free(config->eqs[i]);
 	free(config->eqs);
@@ -274,7 +274,7 @@ void SuperConfig_free_static(SuperConfig * config)
  * */
 void SuperConfig_free_dynamic(SuperConfig * config)
 {
-	int32_t i,j;
+	int i,j;
 	for(i = 0; i < config->numConfigs2d; i++)
 	{
 		DatConfig2d_free(config->configs2d[i]);
@@ -295,9 +295,9 @@ void SuperConfig_free_dynamic(SuperConfig * config)
 /* positions is the position-counts for the panmictic configuration of the SuperConfig
  * configLength is the length of that positions array. 
  * (See the fourth bullet of the left column of p. 615 of Wu's paper.) */
-int32_t SuperConfig_get_num_configs2d(int32_t * positions, int32_t configLength)
+int SuperConfig_get_num_configs2d(int * positions, int configLength)
 {
-	int32_t i, numConfigs = 1;
+	int i, numConfigs = 1;
 	for(i = 0; i < configLength; i++)
 	{
 		if(positions[i] > 0)
@@ -306,9 +306,9 @@ int32_t SuperConfig_get_num_configs2d(int32_t * positions, int32_t configLength)
 	return numConfigs;
 }
 
-int32_t SuperConfig_get_index(twoints * positions2d, int32_t * positionMultipliers, int32_t configLength)
+int SuperConfig_get_index(twoints * positions2d, int * positionMultipliers, int configLength)
 {
-	int32_t i, idx = 0;
+	int i, idx = 0;
 	for(i = 0; i < configLength; i++)
 	{
 		if(positions2d[i][0] > 0)
@@ -317,9 +317,9 @@ int32_t SuperConfig_get_index(twoints * positions2d, int32_t * positionMultiplie
 	return idx;
 }
 
-void SuperConfig_index_to_positions(int32_t idx, SuperConfig * super, twoints * positions)
+void SuperConfig_index_to_positions(int idx, SuperConfig * super, twoints * positions)
 {
-	int32_t i, remainingIdx = idx;
+	int i, remainingIdx = idx;
 	for(i = super->configLength-1; i >= 0; i--)
 	{
 		if(super->positionMultipliers[i] > 0)
@@ -335,11 +335,11 @@ void SuperConfig_index_to_positions(int32_t idx, SuperConfig * super, twoints * 
 	return;
 }
 
-//int32_t * SuperConfig_get_position_multipliers(int32_t * panmicticPositions, int32_t configLength)
+//int * SuperConfig_get_position_multipliers(int * panmicticPositions, int configLength)
 // positionMultipliers is an input argument
-void SuperConfig_get_position_multipliers(int32_t * panmicticPositions, int32_t configLength, int32_t * positionMultipliers)
+void SuperConfig_get_position_multipliers(int * panmicticPositions, int configLength, int * positionMultipliers)
 {
-	int32_t i, currentMultiplier = 1;
+	int i, currentMultiplier = 1;
 	CHECKPOINTER(positionMultipliers);
 	for(i = 0; i < configLength; i++)
 	{
@@ -355,7 +355,7 @@ void SuperConfig_get_position_multipliers(int32_t * panmicticPositions, int32_t 
 
 void SuperConfig_add_datconfig2d(SuperConfig * super, twoints * positions)
 {
-	int32_t i, idx;
+	int i, idx;
 	// test results seem to indicate that this is not necessary, but the proof requires more attention
 	idx = SuperConfig_get_index(positions, super->positionMultipliers, super->configLength);
 	DatConfig2d * config = super->configs2d[idx];
@@ -368,9 +368,9 @@ void SuperConfig_add_datconfig2d(SuperConfig * super, twoints * positions)
 	return;
 }
 
-void SuperConfig_add_datconfig2d_nonrecursive(SuperConfig * super, twoints * positions, int32_t idx)
+void SuperConfig_add_datconfig2d_nonrecursive(SuperConfig * super, twoints * positions, int idx)
 {
-	int32_t i;
+	int i;
 	DatConfig2d * config = super->configs2d[idx];
 	for(i = 0; i < super->configLength; i++)
 	{
@@ -381,9 +381,9 @@ void SuperConfig_add_datconfig2d_nonrecursive(SuperConfig * super, twoints * pos
 	return;
 }
 
-void SuperConfig_fill_in_datconfigs2d_recursive_(SuperConfig * super, twoints * positions, const int32_t * reference, int32_t len)
+void SuperConfig_fill_in_datconfigs2d_recursive_(SuperConfig * super, twoints * positions, const int * reference, int len)
 {
-	int32_t i, j;
+	int i, j;
 	// add it
 	SuperConfig_add_datconfig2d(super, positions); 
 	// get the next
@@ -408,8 +408,8 @@ void SuperConfig_fill_in_datconfigs2d_recursive_(SuperConfig * super, twoints * 
 void SuperConfig_fill_in_datconfigs2d(SuperConfig * super)
 {
 	// reference is super->panmictic.positions
-	int32_t i;
-	const int32_t * reference = super->panmictic.positions;
+	int i;
+	const int * reference = super->panmictic.positions;
 	twoints * bucket = (twoints *)malloc(sizeof(twoints) * super->configLength);
 	CHECKPOINTER(bucket);
 	for(i = 0; i < super->configLength; i++)
@@ -425,7 +425,7 @@ void SuperConfig_fill_in_datconfigs2d(SuperConfig * super)
 void SuperConfig_fill_in_datconfigs2d_nonrecursive(SuperConfig * super)
 {
 	// reference is super->panmictic.positions
-	int32_t i, j, numConfigs2d = super->numConfigs2d;
+	int i, j, numConfigs2d = super->numConfigs2d;
 	twoints * bucket = (twoints *)malloc(sizeof(twoints) * super->configLength);
 	CHECKPOINTER(bucket);
 	for(i = 0; i < super->configLength; i++)
@@ -444,7 +444,7 @@ void SuperConfig_fill_in_datconfigs2d_nonrecursive(SuperConfig * super)
 
 void SuperConfig_print(SuperConfig * config, FILE * output)
 {
-	int32_t i;
+	int i;
 	fprintf(output, "--printing SuperConfig--\n");
 	fprintf(output, "numConfigs2d = %i\n", config->numConfigs2d);
 	fprintf(output, "configLength = %i\n", config->configLength);
@@ -463,9 +463,9 @@ void SuperConfig_print(SuperConfig * config, FILE * output)
 /* HashSuper functions */
 /////////////////////////
 
-void HashSuper_init(HashSuper * table, int32_t elementLength)
+void HashSuper_init(HashSuper * table, int elementLength)
 {
-	int32_t i;
+	int i;
 	table->elements = (SuperConfig **)malloc(sizeof(SuperConfig *) * DEFAULT_HASH_TABLE_SIZE);
 	CHECKPOINTER(table->elements);
 	for(i = 0; i < DEFAULT_HASH_TABLE_SIZE; i++)
@@ -484,7 +484,7 @@ void HashSuper_free(HashSuper * table)
 
 void HashSuper_reset(HashSuper * table)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < table->size; i++)
 		table->elements[i] = NULL;
 	return;
@@ -518,7 +518,7 @@ void HashSuper_insert_config(SuperConfig * config, HashSuper * table)
  * of the open-addressed SuperConfigs match, then a pointer to the insertion
  * point is returned. If the SuperConfig *is* found, then the insertion point is
  * returned NULL. */
-SuperConfig ** HashSuper_get_insertion_point(int32_t * positions, HashSuper * table)
+SuperConfig ** HashSuper_get_insertion_point(int * positions, HashSuper * table)
 {
 	uint32_t hashIdx = HashSuper_get_hash_idx(positions, table->elementLength);
 	SuperConfig * foundConfig = table->elements[hashIdx];
@@ -536,7 +536,7 @@ SuperConfig ** HashSuper_get_insertion_point(int32_t * positions, HashSuper * ta
 	return insertionPoint;
 }
 
-int32_t HashSuper_check_in_table(int32_t * positions, HashSuper * table)
+int HashSuper_check_in_table(int * positions, HashSuper * table)
 {
 	uint32_t hashIdx = HashSuper_get_hash_idx(positions, table->elementLength);
 	SuperConfig * foundConfig = table->elements[hashIdx];
@@ -553,7 +553,7 @@ int32_t HashSuper_check_in_table(int32_t * positions, HashSuper * table)
 	return 0;
 }
 
-SuperConfig * HashSuper_find_superconfig(int32_t * positions, HashSuper * table)
+SuperConfig * HashSuper_find_superconfig(int * positions, HashSuper * table)
 {
 	uint32_t hashIdx = HashSuper_get_hash_idx(positions, table->elementLength);
 	//fprintf(stdout, "hashIdx = %i\n", hashIdx);
@@ -579,27 +579,27 @@ SuperConfig * HashSuper_find_superconfig(int32_t * positions, HashSuper * table)
 	PERROR("broken open addressing in HashSuper_find_config().");
 }
 
-int32_t HashSuper_configs_equal(int32_t * positions1, int32_t * positions2, int32_t configLength)
+int HashSuper_configs_equal(int * positions1, int * positions2, int configLength)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < configLength; i++)
 		if(positions1[i] != positions2[i])
 			return 0;
 	return 1;
 }
 
-uint32_t HashSuper_get_hash_idx_old(int32_t * positions, int32_t length)
+uint32_t HashSuper_get_hash_idx_old(int * positions, int length)
 {
-	uint32_t hash = jenkins_one_at_a_time_hash((char *)positions, sizeof(int32_t) * length);
+	uint32_t hash = jenkins_one_at_a_time_hash((char *)positions, sizeof(int) * length);
 	hash %= DEFAULT_HASH_TABLE_SIZE;
 	return hash;
 }
 
-uint32_t HashSuper_get_hash_idx(int32_t * positions, int32_t length)
+uint32_t HashSuper_get_hash_idx(int * positions, int length)
 {
 	uint32_t hash128[4];
 	uint32_t seed = 11;
-	MurmurHash3_x64_128((const void *)positions, (int)(length * sizeof(int32_t)), seed, hash128);
+	MurmurHash3_x64_128((const void *)positions, (int)(length * sizeof(int)), seed, hash128);
 	hash128[0] %= DEFAULT_HASH_TABLE_SIZE;
 	return hash128[0];
 }
@@ -610,9 +610,9 @@ uint32_t HashSuper_get_hash_idx(int32_t * positions, int32_t length)
 /* SuperCollection functions */
 ///////////////////////////////
 
-void SuperCollection_init(SuperCollection * collection, int32_t configLength, int32_t * numChildren, int32_t numThetas, int32_t numMigRates)
+void SuperCollection_init(SuperCollection * collection, int configLength, int * numChildren, int numThetas, int numMigRates)
 {
-	int32_t i;
+	int i;
 	collection->numChildren = numChildren;
 	collection->curNumSuperConfigs = 0;
 	collection->maxNumSuperConfigs = DEFAULT_SUPER_COLLECTION_NUMSUPERCONFIGS;
@@ -633,7 +633,7 @@ void SuperCollection_init(SuperCollection * collection, int32_t configLength, in
 
 void SuperCollection_reset(SuperCollection * collection)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < collection->curNumSuperConfigs; i++)
 		SuperConfig_free_dynamic(collection->superConfigs[i]);
 	collection->curNumSuperConfigs = 0;
@@ -642,7 +642,7 @@ void SuperCollection_reset(SuperCollection * collection)
 
 void SuperCollection_free(SuperCollection * collection)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < collection->maxNumSuperConfigs; i++)
 	{
 		SuperConfig_free_static(collection->superConfigs[i]);
@@ -653,9 +653,9 @@ void SuperCollection_free(SuperCollection * collection)
 	return;
 }
 
-void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t numNewSuperConfigs, int32_t numThetas)
+void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int numNewSuperConfigs, int numThetas)
 {
-	int32_t i, newNumSuperConfigs = collection->maxNumSuperConfigs + numNewSuperConfigs;
+	int i, newNumSuperConfigs = collection->maxNumSuperConfigs + numNewSuperConfigs;
 	collection->superConfigs = (SuperConfig **)realloc((void *)(collection->superConfigs), sizeof(SuperConfig *) * (size_t)newNumSuperConfigs);
 	CHECKPOINTER(collection->superConfigs);
 	for(i = collection->maxNumSuperConfigs; i < newNumSuperConfigs; i++)
@@ -669,7 +669,7 @@ void SuperCollection_add_SuperConfig_space(SuperCollection * collection, int32_t
 	return;
 }
 
-SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection, int32_t numThetas)
+SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection, int numThetas)
 {
 	if(collection->curNumSuperConfigs >= collection->maxNumSuperConfigs)
 		SuperCollection_add_SuperConfig_space(collection, DEFAULT_SUPER_COLLECTION_INCREASE, numThetas);
@@ -687,7 +687,7 @@ SuperConfig * SuperCollection_get_SuperConfig(SuperCollection * collection, int3
 void SuperCollection_add_SuperConfig(SuperCollection * collection, DatConfig * panmictic, struct dataset2d_ * ds)
 {
 	// this may not work...
-	int32_t numThetas = panmictic->numProbs;
+	int numThetas = panmictic->numProbs;
 	//SuperConfig ** insertionPoint;
 	// updated: now have to check whether it's in the collection already:
 	if(!HashSuper_check_in_table(panmictic->positions, &(collection->hashSuper)))		// TODO: check/rewrite function to check and get insertion point (or NULL) at same time (see below).
@@ -710,7 +710,7 @@ void SuperCollection_add_SuperConfig(SuperCollection * collection, DatConfig * p
 
 void SuperCollection_print(SuperCollection * collection, FILE * output)
 {
-	int32_t i;
+	int i;
 	fprintf(output, "----Printing SuperCollection----\n");
 	fprintf(output, "curNumSuperConfigs = %i\n", collection->curNumSuperConfigs);
 	fprintf(output, "maxNumSuperConfigs = %i\n", collection->maxNumSuperConfigs);
@@ -727,14 +727,14 @@ void SuperCollection_print(SuperCollection * collection, FILE * output)
 
 /* a test */
 /*
-int32_t main()
+int main()
 {
 	SuperConfig super;
 	SuperCollection collection;
-	int32_t * positions = (int32_t *)malloc(sizeof(int32_t) * 3);
+	int * positions = (int *)malloc(sizeof(int) * 3);
 	CHECKPOINTER(positions);
 	positions[0] = 2; positions[1] = 3; positions[2] = 2;
-	int32_t * numChildren = (int32_t *)malloc(sizeof(int32_t) * 3);
+	int * numChildren = (int *)malloc(sizeof(int) * 3);
 	CHECKPOINTER(numChildren);
 	numChildren[0] = 4; numChildren[1] = 1; numChildren[2] = 2;		// meaningless values
 	// no longer up to date:

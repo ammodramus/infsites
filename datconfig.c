@@ -8,21 +8,21 @@
 #include "dataset.h"
 #include "hash.h"
 
-void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren, int32_t numProbs)
+void DatConfig_init(DatConfig * df, int length, int * numChildren, int numProbs)
 {
-	int32_t i;
+	int i;
 	df->length = length;
 	df->numChildren = numChildren;
-	df->positions = (int32_t *)calloc((size_t)length, sizeof(int32_t));
+	df->positions = (int *)calloc((size_t)length, sizeof(int));
 	CHECKPOINTER(df->positions);
-	df->satisfied = (int32_t **)malloc(sizeof(int32_t *) * (size_t)(length));
+	df->satisfied = (int **)malloc(sizeof(int *) * (size_t)(length));
 	CHECKPOINTER(df->satisfied);
 	for(i = 0; i < length; i++)
 	{
-		df->satisfied[i] = (int32_t *)calloc((size_t)(numChildren[i]), sizeof(int32_t));
+		df->satisfied[i] = (int *)calloc((size_t)(numChildren[i]), sizeof(int));
 		CHECKPOINTER(df->satisfied[i]);
 	}
-	df->active = (int32_t *)calloc((size_t)length, sizeof(int32_t));
+	df->active = (int *)calloc((size_t)length, sizeof(int));
 	CHECKPOINTER(df->active);
 	df->numProbs = numProbs;
 	df->probs = (double *)calloc(numProbs, sizeof(double));
@@ -32,7 +32,7 @@ void DatConfig_init(DatConfig * df, int32_t length, int32_t * numChildren, int32
 
 void DatConfig_free(DatConfig * df)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < df->length; i++)
 		free(df->satisfied[i]);
 	free(df->satisfied);
@@ -45,7 +45,7 @@ void DatConfig_free(DatConfig * df)
 
 void DatConfig_get_ref_config(BMat * bmat, DatConfig * config)
 {
-	int32_t i, j, maxJ;
+	int i, j, maxJ;
 	//for(i = 0; i < bmat->ncols; i++)
 	for(i = 0; i < bmat->ncols+1; i++)		// if single-deme stops working, could be here.
 		config->positions[i] = config->active[i] = 0;
@@ -69,7 +69,7 @@ void DatConfig_get_ref_config(BMat * bmat, DatConfig * config)
 
 void DatConfig_set_root_config(DatConfig * df)
 {
-	int32_t i, j;
+	int i, j;
 	for(i = 0; i < df->length; i++)
 		df->positions[i] = df->active[i] = 0;
 	df->positions[0] = df->active[0] = 1;
@@ -83,9 +83,9 @@ void DatConfig_set_root_config(DatConfig * df)
 	return;
 }
 
-void DatConfig_print(DatConfig * df, FILE * output, int32_t tabCount)
+void DatConfig_print(DatConfig * df, FILE * output, int tabCount)
 {
-	int32_t i,j;
+	int i,j;
 	for(i = 0; i < tabCount; i++)
 		fprintf(output, "\t");
 	fprintf(output, "\n----Printing DatConfig---- (length: %i, prob %f)\n", df->length, df->prob);
@@ -127,7 +127,7 @@ void DatConfig_copy_dimensions(DatConfig * df, DatConfig * dfClone)
  * dimensions as df's (using DatConfig_copy_dimensions()) */
 void DatConfig_copy_config(DatConfig * df, DatConfig * dfClone)
 {
-	int32_t i,j,k;
+	int i,j,k;
 	dfClone->length = df->length;
 	dfClone->numChildren = df->numChildren;
 	dfClone->prob = df->prob;
@@ -145,9 +145,9 @@ void DatConfig_copy_config(DatConfig * df, DatConfig * dfClone)
 	return;
 }
 
-void DatConfig_set_initial_node_indices(DatConfig * config, int32_t * initialNodeIndices)
+void DatConfig_set_initial_node_indices(DatConfig * config, int * initialNodeIndices)
 {
-    int32_t i;
+    int i;
     for(i = 0; i < config->length; i++)
     {
         if(config->positions[i] > 0)
@@ -164,9 +164,9 @@ void DatConfig_set_initial_node_indices(DatConfig * config, int32_t * initialNod
 /* HashTable functions */
 /////////////////////////
 
-void HashTable_init(HashTable * table, int32_t elementLength)
+void HashTable_init(HashTable * table, int elementLength)
 {
-	int32_t i;
+	int i;
 	table->elements = (DatConfig **)malloc(sizeof(DatConfig *) * DEFAULT_HASH_TABLE_SIZE);
 	CHECKPOINTER(table->elements);
 	for(i = 0; i < DEFAULT_HASH_TABLE_SIZE; i++)
@@ -185,7 +185,7 @@ void HashTable_free(HashTable * table)
 
 void HashTable_reset(HashTable * table)
 {
-	int32_t i;
+	int i;
 	//for(i = 0; i < table->numElements; i++)    // a former bug (14 Jan 2014)
 	for(i = 0; i < table->size; i++)
 		table->elements[i] = NULL;
@@ -194,7 +194,7 @@ void HashTable_reset(HashTable * table)
 
 void HashTable_insert_config(DatConfig * config, HashTable * table)
 {
-	int32_t hashIdx = HashTable_get_hash_idx(config->positions, table->elementLength);
+	int hashIdx = HashTable_get_hash_idx(config->positions, table->elementLength);
 	DatConfig * insertionPoint;
 	config->next = NULL;
 	if(table->elements[hashIdx] == NULL)
@@ -235,9 +235,9 @@ DatConfig * HashTable_find_config(DatConfig * config, HashTable * table)
 	PERROR("broken open addressing in HashTable_find_config().");
 }
 
-int32_t HashTable_configs_equal(DatConfig * config1, DatConfig * config2)
+int HashTable_configs_equal(DatConfig * config1, DatConfig * config2)
 {
-	int32_t i;
+	int i;
 	if(config1->length != config2->length)
 		PERROR("comparing two configs of different lengths");
 	for(i = 0; i < config1->length; i++)
@@ -246,9 +246,9 @@ int32_t HashTable_configs_equal(DatConfig * config1, DatConfig * config2)
 	return 1;
 }
 
-uint32_t HashTable_get_hash_idx(int32_t * positions, int32_t length)
+uint32_t HashTable_get_hash_idx(int * positions, int length)
 {
-	uint32_t hash = jenkins_one_at_a_time_hash((char *)positions, sizeof(int32_t) * length);
+	uint32_t hash = jenkins_one_at_a_time_hash((char *)positions, sizeof(int) * length);
 	hash %= DEFAULT_HASH_TABLE_SIZE;
 	return hash;
 }
@@ -260,9 +260,9 @@ uint32_t HashTable_get_hash_idx(int32_t * positions, int32_t length)
 /* ConfigCollection functions */
 ////////////////////////////////
 
-void ConfigCollection_init(ConfigCollection * cc, int32_t configLength, int32_t * numChildren, int32_t numThetas)
+void ConfigCollection_init(ConfigCollection * cc, int configLength, int * numChildren, int numThetas)
 {
-	int32_t i;
+	int i;
 	cc->configs = (DatConfig **)malloc(sizeof(DatConfig *) * (size_t)(DEFAULT_CONFIGCOLLECTION_NUMCONFIGS));
 	CHECKPOINTER(cc->configs);
 	for(i = 0; i < DEFAULT_CONFIGCOLLECTION_NUMCONFIGS; i++)
@@ -282,7 +282,7 @@ void ConfigCollection_init(ConfigCollection * cc, int32_t configLength, int32_t 
 
 void ConfigCollection_free(ConfigCollection * cc)
 {
-	int32_t i;
+	int i;
 	for(i = 0; i < cc->maxNumConfigs; i++)
 	{
 		DatConfig_free(cc->configs[i]);
@@ -293,9 +293,9 @@ void ConfigCollection_free(ConfigCollection * cc)
 	return;
 }
 
-void ConfigCollection_add_config_space(ConfigCollection * cc, int32_t numNewConfigs)
+void ConfigCollection_add_config_space(ConfigCollection * cc, int numNewConfigs)
 {
-	int32_t i, newNumConfigs = cc->maxNumConfigs + numNewConfigs;
+	int i, newNumConfigs = cc->maxNumConfigs + numNewConfigs;
 	cc->configs = (DatConfig **)realloc((void *)cc->configs, sizeof(DatConfig *) * (size_t)newNumConfigs);
 	CHECKPOINTER(cc->configs);
 	for(i = cc->maxNumConfigs; i < newNumConfigs; i++)
@@ -321,7 +321,7 @@ DatConfig * ConfigCollection_get_empty_config(ConfigCollection * cc)
 
 void ConfigCollection_add_config(ConfigCollection * cc, DatConfig * config)
 {
-	int32_t k;
+	int k;
 	DatConfig * hashConfig;
 	DatConfig * cloneConfig;
 	// look for config
@@ -355,7 +355,7 @@ void ConfigCollection_reset(ConfigCollection * cc)
 
 void ConfigCollection_print(ConfigCollection * cc, FILE * output)
 {
-	int32_t i;
+	int i;
 	fprintf(output,"\n====Printing ConfigCollection====\n\n");
 	fprintf(output, "curNumConfigs = %i\n", cc->curNumConfigs);
 	for(i = 0; i < cc->curNumConfigs; i++)
@@ -367,7 +367,7 @@ void ConfigCollection_print(ConfigCollection * cc, FILE * output)
 	return;
 }
 
-double ConfigCollection_get_final_prob(ConfigCollection * cc, int32_t thetaIdx)
+double ConfigCollection_get_final_prob(ConfigCollection * cc, int thetaIdx)
 {
 	if(cc->curNumConfigs != 1)
 	{
@@ -382,9 +382,9 @@ double ConfigCollection_get_final_prob(ConfigCollection * cc, int32_t thetaIdx)
 /*
 int	main()
 {
-	int32_t i;
+	int i;
 	ConfigCollection cc;
-	int32_t * numChildren = (int32_t *)malloc(sizeof(int32_t) * 6);
+	int * numChildren = (int *)malloc(sizeof(int) * 6);
 	numChildren[0] = 1;
 	numChildren[1] = 1;
 	numChildren[2] = 4;

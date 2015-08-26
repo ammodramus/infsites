@@ -14,6 +14,6 @@
 
 #define INT32T_MAX 2147483647 
 
-typedef int32_t twoints[2];
+typedef int twoints[2];
 
 #endif

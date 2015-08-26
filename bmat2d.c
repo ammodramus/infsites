@@ -6,10 +6,10 @@
 #include "bmat.h"
 #include "bmat2d.h"
 
-void BMat2d_init(BMat2d * b2, int32_t nrows, int32_t numSegSites)
+void BMat2d_init(BMat2d * b2, int nrows, int numSegSites)
 {
 	BMat_init(&(b2->bmat), nrows, numSegSites);
-	b2->demes = (int32_t *)malloc(sizeof(int32_t) * nrows);
+	b2->demes = (int *)malloc(sizeof(int) * nrows);
 	b2->nrows = nrows;
 	b2->ncols = numSegSites;
 	CHECKPOINTER(b2->demes);
@@ -25,28 +25,32 @@ void BMat2d_free(BMat2d * b2)
 
 void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 {
-	int32_t i, j, deme, numSegSites, nrows = 0;
+	int i, j, deme, numSegSites, nrows;
 	char line[DEFAULT_MAX_LINE_SIZE];
 	char haplotype[DEFAULT_MAX_LINE_SIZE];
 	char ** lines = (char **)malloc(sizeof(char *) * DEFAULT_MAX_NUM_LINES);
 	CHECKPOINTER(lines);
-	int32_t * demes = (int32_t *)malloc(sizeof(int32_t) * DEFAULT_MAX_NUM_LINES);
+	int * demes = (int *)malloc(sizeof(int) * DEFAULT_MAX_NUM_LINES);
 	CHECKPOINTER(demes);
 
-    int32_t mono = 1;
+    int mono = 1;
 
-    lines[nrows] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
-    CHECKPOINTER(lines[nrows]);
+    lines[0] = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
+    CHECKPOINTER(lines[0]);
 
 	if(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) == NULL)
 		PERROR("No first line in input.");
 
     sscanf(line, "%s %i\n", haplotype, &deme); // *space* between %s and %i
-    numSegSites = (int32_t)strlen(haplotype);
+    numSegSites = (int)strlen(haplotype);
     if(deme != 0 && deme != 1)
         PERROR("Non 0/1 deme entry in two-deme input.");
-    strcpy(lines[nrows], haplotype);
-    demes[nrows++] = deme;
+    strcpy(lines[0], haplotype);
+    demes[0] = deme;
+
+    // now proceed on to processing second row
+    nrows = 1;
+
     for(i = 0; i < numSegSites; i++)
     {
         if(haplotype[i] == '1')
@@ -80,7 +84,7 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 				continue;
 			if(lines[i][j] != '0' && lines[i][j] != '1')
 			{
-				fprintf(stdout, "%c", lines[i][j]);
+				fprintf(stderr, "bad character: %c", lines[i][j]);
 				PERROR("non 0/1 character in input.");
 			}
             if(lines[i][j] == '1')
@@ -94,6 +98,70 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 	free(lines);
 	free(demes);
 	fclose(inp);
+	return;
+}
+
+void BMat2d_read_input_ctypes(char ** inp, int numHaplotypes, BMat2d * bmat2d)
+{
+	int i, j, deme, numSegSites;
+	char * line;
+	char haplotype[DEFAULT_MAX_LINE_SIZE];
+
+    int mono = 1;
+
+    // first process first line to get number of segregating sites
+    for(i = 0; i < numHaplotypes; i++)
+    {
+        if(!inp[i])
+        {
+            fprintf(stderr, "missing line: %i\n", i);
+            PERROR("missing input in BMat2d_read_input_ctypes()");
+        }
+    }
+
+    // first, look at first line to determine number of segregating sites
+    line = inp[0];
+    sscanf(line, "%s %i\n", haplotype, &deme); // *space* between %s and %i
+    numSegSites = (int)strlen(haplotype);
+    if(deme != 0 && deme != 1)
+        PERROR("Non 0/1 deme entry in two-deme input.");
+
+    // now determine whether monomorphic or not
+    for(i = 0; i < numHaplotypes; i++)
+    {
+        for(j = 0; j < numSegSites; j++)
+        {
+            if(inp[i][j] == '1')
+                mono = 0;
+        }
+    }
+
+    if(!mono)
+        BMat2d_init(bmat2d, numHaplotypes, numSegSites);
+    else // mono (numSegSites-1 because monomorphic sites are inputted as a single column of 0's, which would otherwise be counted as a segregating site)
+        BMat2d_init(bmat2d, numHaplotypes, numSegSites-1);
+
+	for(i = 0; i < numHaplotypes; i++)
+	{
+        line = inp[i];
+        sscanf(line, "%s %i\n", haplotype, &deme);
+		for(j = 0; j < numSegSites; j++)
+		{
+			if(line[j] == '\0' || line[j] == '\n')
+				continue;
+			if(line[j] != '0' && line[j] != '1')
+			{
+				fprintf(stderr, "bad character: %c", line[j]);
+				PERROR("non 0/1 character in input.");
+			}
+            // (from a recent C standard:)
+            // In both the source and execution basic character sets, the value
+            // of each character after 0 in the [...] list of decimal digits
+            // shall be one greater than the value of the previous.
+			bmat2d->bmat.mat[i][j] = line[j] - '0';
+		}
+		bmat2d->demes[i] = deme;
+	}
 	return;
 }
 
@@ -111,12 +179,12 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
  * The above BMat would return (2 2 1) for numDuplicates and 3 for *numUnique.
  *
  * numDuplicates is an input parameter, an array of twoints that is at least bmat->nrows long.
- * numUnique is an input parameter, the pointer to an int32_t array of length 2. */
-void BMat2d_get_haplotype_counts(BMat2d * bmat2d, twoints * numDuplicates, int32_t * numUnique)
+ * numUnique is an input parameter, the pointer to an int array of length 2. */
+void BMat2d_get_haplotype_counts(BMat2d * bmat2d, twoints * numDuplicates, int * numUnique)
 {
-	int32_t i, ii, j, deme, same, nrows = bmat2d->bmat.nrows, ncols = bmat2d->bmat.ncols, dupCounter;
-	int32_t * demes = bmat2d->demes;
-	int32_t * checked = (int32_t *)malloc(sizeof(int32_t) * (size_t)bmat2d->bmat.nrows);
+	int i, ii, j, deme, same, nrows = bmat2d->bmat.nrows, ncols = bmat2d->bmat.ncols, dupCounter;
+	int * demes = bmat2d->demes;
+	int * checked = (int *)malloc(sizeof(int) * (size_t)bmat2d->bmat.nrows);
 	CHECKPOINTER(checked);
 	//fprintf(stdout, "nrows = %i\n", bmat->nrows);
 	for(deme = 0; deme < 2; deme++)

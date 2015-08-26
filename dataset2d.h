@@ -13,39 +13,40 @@
 
 typedef struct dataset2d_
 {
-	int32_t numSegSites;
-	int32_t numSamples;
-	int32_t recipientCollection;
+	int numSegSites;
+	int numSamples;
+	int recipientCollection;
 	BMat2d * bmat2d;
 	BMat * Lij;
-	int32_t * Lj;
+	int * Lj;
 	NodeList nodeList;
 	struct datconfig_ refConfig;
 	struct datconfig2d_ refConfig2d;
 	struct supercollection_ * collection[2];
 	double migRatesPair[2];
 	double theta;
-	int32_t numThetas;
+	int numThetas;
 	double * thetas;
-	int32_t numMigRates;
+	int numMigRates;
 	double * migRates;
-    int32_t * initialNodes;
-    int32_t ordered;
+    int * initialNodes;
+    int ordered;
 } DataSet2d;
 
 
-void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered, int32_t genetree);
+void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int numThetas, double * thetas, int numMigRates, double * migRates, int printAll, int ordered, int genetree);
+void DataSet2d_solve_ctypes(DataSet2d * ds, BMat2d * inputbmat, int numThetas, double * thetas, int numMigRates, double * migRates, int ordered, int genetree, double * samplingProbs);
 void DataSet2d_free(DataSet2d * ds);
-void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int32_t printAll);
+void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int printAll);
 void DataSet2d_solve_equations(SuperCollection * collection);
 void DataSet2d_donate_deriv_superconfigs(SuperConfig * super, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_transfer_config_collections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_link_supercollections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_link_datconfig2ds(SuperConfig * donorConfig, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_link_probabilities(DatConfig2d * config, SuperCollection * recipient, DataSet2d * ds);
-int32_t DataSet2d_binomial_coeff_(int32_t n, int32_t k);
-int32_t DataSet2d_get_prob_multiplier(DataSet2d * ds);
-int32_t DataSet2d_get_prob_multiplier2(DatConfig2d * config);
+int DataSet2d_binomial_coeff_(int n, int k);
+int DataSet2d_get_prob_multiplier(DataSet2d * ds);
+int DataSet2d_get_prob_multiplier2(DatConfig2d * config);
 void DataSet2d_donate_deriv_superconfigs(SuperConfig * super, SuperCollection * recipient, DataSet2d * ds);
 
 #endif

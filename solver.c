@@ -14,16 +14,16 @@ typedef struct solveroptions_
 {
 	char filenameIn[200];
 	char filenameOut[200];
-	int32_t numDemes;
+	int numDemes;
 	double * thetas;
-	int32_t numThetas;
+	int numThetas;
 	double * migRates;
-	int32_t numMigRates;
+	int numMigRates;
 	FILE * fin;
 	FILE * fout;
-    int32_t all;
-    int32_t ordered;
-    int32_t genetree;
+    int all;
+    int ordered;
+    int genetree;
 } SolverOptions;
 
 static struct option long_options[] =
@@ -46,9 +46,9 @@ void Solver_print_usage()
 	return;
 }
 
-void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt)
+void SolverOptions_parse_options(int argc, char ** argv, SolverOptions * opt)
 {
-	int32_t c, i, optionIndex, success, numThetas = -1, numMigRates = -1, thetaIdx, migrationIdx, thetaFileProvided = 0, migFileProvided = 0, stdinSet = 0;
+	int c, i, optionIndex, success, numThetas = -1, numMigRates = -1, thetaIdx, migrationIdx, thetaFileProvided = 0, migFileProvided = 0, stdinSet = 0;
 	char ch, * line;
 	FILE * thetain, * migrationin;
 	double * thetas = NULL, * migRates = NULL;
@@ -193,7 +193,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
         line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
         CHECKPOINTER(line);
 
-        int32_t MAX_NUM_THETAS = 1000;
+        int MAX_NUM_THETAS = 1000;
         thetas = (double *)malloc(sizeof(double) * MAX_NUM_THETAS);
         CHECKPOINTER(thetas);
 
@@ -222,7 +222,7 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
         line = (char *)malloc(sizeof(char) * DEFAULT_MAX_LINE_SIZE);
         CHECKPOINTER(line);
 
-        int32_t MAX_NUM_THETAS = 1000;
+        int MAX_NUM_THETAS = 1000;
         thetas = (double *)malloc(sizeof(double) * MAX_NUM_THETAS);
         CHECKPOINTER(thetas);
 
@@ -241,12 +241,12 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
         thetas = (double *)realloc(thetas, sizeof(double)*numThetas);
 
         // migration rates
-        int32_t MAX_NUM_MIGRATES = 1000;
+        int MAX_NUM_MIGRATES = 1000;
 
         migRates = (double *)malloc(sizeof(double) * MAX_NUM_MIGRATES);
         CHECKPOINTER(migRates);
 
-        int32_t migRateIdx = 0;
+        int migRateIdx = 0;
         while(fgets(line, DEFAULT_MAX_LINE_SIZE, stdin) != NULL)
         {
             if(line[0] == '-')
@@ -290,14 +290,14 @@ void SolverOptions_parse_options(int32_t argc, char ** argv, SolverOptions * opt
 	return;
 }
 
-int32_t check_mono_D1(FILE * inp)
+int check_mono_D1(FILE * inp)
 {
 	char line[DEFAULT_MAX_LINE_SIZE];
 	if(fgets(line, DEFAULT_MAX_LINE_SIZE, inp) == NULL)
 		return -1;
 	rewind(inp);
 	unsigned char c;
-	int32_t numLines = 0;
+	int numLines = 0;
 	while(1)
 	{
 		c = (unsigned char)fgetc(inp);
@@ -312,15 +312,15 @@ int32_t check_mono_D1(FILE * inp)
 	return numLines;    // normal text files end with a \n
 }
 
-void solve_D1(FILE * fin, int32_t numThetas, double * thetas, int32_t printAll, int32_t ordered)
+void solve_D1(FILE * fin, int numThetas, double * thetas, int printAll, int ordered)
 {
-	int32_t i, j, k;
+	int i, j, k;
 	double theta, prob;
 	BMat bmat;
-	//int32_t mono = check_mono_D1(fin);
+	//int mono = check_mono_D1(fin);
     
-    int32_t numHaplotypes = -1;
-    int32_t mono = BMat_read_input(fin, &bmat, &numHaplotypes);
+    int numHaplotypes = -1;
+    int mono = BMat_read_input(fin, &bmat, &numHaplotypes);
 
 	if(!mono)
 	{
@@ -367,11 +367,11 @@ void solve_D1(FILE * fin, int32_t numThetas, double * thetas, int32_t printAll, 
 	return;
 }
 
-void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRates, double * migRates, int32_t printAll, int32_t ordered, int32_t genetree)
+void solve_D2(FILE * fin, int numThetas, double * thetas, int numMigRates, double * migRates, int printAll, int ordered, int genetree)
 {
 	BMat2d b2;
 	DataSet2d ds;
-	int32_t k;
+	int k;
 
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
@@ -386,6 +386,33 @@ void solve_D2(FILE * fin, int32_t numThetas, double * thetas, int32_t numMigRate
     }
 	BMat2d_read_input(fin, &b2);
 	DataSet2d_init(&ds, &b2, numThetas, thetas, numMigRates, migRates, printAll, ordered, genetree);
+	BMat2d_free(&b2);
+	free(thetas);
+	free(migRates);
+	return;
+}
+
+// fills array of sampling probs for original reconfig only (will make another version that fills reconfig probs for all reconfigs)
+void solve_D2_ctypes(char ** input, int numHaplotypes, int numThetas, double * thetas, int numMigRates, double * migRates, int ordered, int genetree, double * samplingProbs)
+{
+	BMat2d b2;
+	DataSet2d ds;
+	int k;
+
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    //// to make probabilities maximally compatible with *genetree*, which     /////
+    //// defines theta as 4*N_{tot}*mu = 4*N*D*mu, which here is twice 4*N*mu. /////
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////////////////////////////////////////////////////////////////////////////
+    if(genetree)
+    {
+        for(k = 0; k < numThetas; k++)
+            thetas[k] /= 2.0;
+    }
+
+	BMat2d_read_input_ctypes(input, numHaplotypes, &b2);
+	DataSet2d_solve_ctypes(&ds, &b2, numThetas, thetas, numMigRates, migRates, ordered, genetree, samplingProbs);
 	BMat2d_free(&b2);
 	free(thetas);
 	free(migRates);
