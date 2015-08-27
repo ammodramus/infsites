@@ -175,7 +175,6 @@ void DataSet2d_solve_ctypes(DataSet2d * ds, BMat2d * inputbmat, int numThetas, d
 	for(j = 0; j < numStages-1; j++)
 		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds, 0); // last argument (printAll) is zero in this ctypes function
 
-    double thetaMultiplier = genetree ? 2.0 : 1.0;
     finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
     int spIdx = 0;
     for(i = 0; i < ds->numThetas; i++)
@@ -187,6 +186,84 @@ void DataSet2d_solve_ctypes(DataSet2d * ds, BMat2d * inputbmat, int numThetas, d
             spIdx++;
         }
     }
+
+	SuperCollection_reset(ds->collection[!(ds->recipientCollection)]);
+	SuperCollection_reset(ds->collection[(ds->recipientCollection)]);
+	DatConfig_free(&rootPanmictic);
+	DataSet2d_free(ds);
+	return;
+}
+
+void DataSet2d_solve_ctypes_all(DataSet2d * ds, BMat2d * inputbmat, int numThetas, double * thetas, int numMigRates, double * migRates, int ordered, int genetree, int ** recIdxs, double ** samplingProbs)
+{
+	int i,j, numStages, configLength;
+	ds->bmat2d = inputbmat;
+	ds->numSegSites = inputbmat->ncols;
+	ds->numSamples = inputbmat->nrows;
+	ds->recipientCollection = 1;
+	numStages = ds->numSegSites + ds->numSamples;
+
+    ds->ordered = ordered;
+
+	ds->thetas = thetas;
+	ds->numThetas = numThetas;
+	ds->migRates = migRates;
+	ds->numMigRates = numMigRates;
+
+	ds->collection[0] = (SuperCollection *)malloc(sizeof(SuperCollection));
+	CHECKPOINTER(ds->collection[0]);
+	ds->collection[1] = (SuperCollection *)malloc(sizeof(SuperCollection));
+	CHECKPOINTER(ds->collection[1]);
+	BMat_order_columns(&(ds->bmat2d->bmat));
+	ds->Lij = (BMat *)malloc(sizeof(BMat));
+	CHECKPOINTER(ds->Lij);
+	BMat_init(ds->Lij, ds->bmat2d->nrows, ds->bmat2d->ncols);
+	for(i = 0; i < ds->bmat2d->nrows; i++)
+		for(j = 0; j < ds->bmat2d->ncols; j++)
+			ds->Lij->mat[i][j] = BMat_get_Lij(&(ds->bmat2d->bmat), i, j);
+	ds->Lj = (int *)malloc(sizeof(int) * (size_t)ds->bmat2d->ncols);
+	CHECKPOINTER(ds->Lj);
+	for(j = 0; j < ds->bmat2d->ncols; j++)
+		ds->Lj[j] = BMat_get_Lj(&(ds->bmat2d->bmat), ds->Lij, j);
+	if(!BMat_determine_good(&(ds->bmat2d->bmat), ds->Lij, ds->Lj))
+		PERROR("Data does not conform to infinite-sites mutation model.");
+	NodeList_create_phylogeny(&(ds->nodeList), &(ds->bmat2d->bmat), ds->Lj);
+	configLength = ds->nodeList.numNodes;
+	NodeList_get_num_children(&(ds->nodeList));
+	NodeList_get_idxToNode(&(ds->nodeList));
+	DatConfig_init(&(ds->refConfig), configLength, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_get_ref_config(&(ds->bmat2d->bmat), &(ds->refConfig));
+
+    // get initialNodes
+    ds->initialNodes = (int *)malloc(sizeof(int) * (size_t)(ds->refConfig.length));
+    CHECKPOINTER(ds->initialNodes);
+    DatConfig_set_initial_node_indices(&ds->refConfig, ds->initialNodes);
+
+	DatConfig2d_init(&(ds->refConfig2d), configLength, &(ds->refConfig), (SuperConfig *)NULL, ds->numThetas, ds->numMigRates); 
+	DatConfig2d_get_ref_datconfig2d(ds->bmat2d, &(ds->refConfig2d));
+
+	DatConfig rootPanmictic;
+	DatConfig_init(&rootPanmictic, configLength, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_set_root_config(&rootPanmictic);
+
+
+	SuperCollection_init(ds->collection[0], configLength, ds->refConfig.numChildren, ds->numThetas, ds->numMigRates);
+	SuperCollection_init(ds->collection[1], configLength, ds->refConfig.numChildren, ds->numThetas, ds->numMigRates);
+	SuperCollection_add_SuperConfig(ds->collection[0], &rootPanmictic, ds);
+
+	for(i = 0; i < ds->numThetas; i++)
+	{
+		for(j = 0; j < ds->numMigRates; j++)
+		{
+			ds->collection[0]->superConfigs[0]->configs2d[0]->probs[i][j] = 1.0;
+			ds->collection[0]->superConfigs[0]->configs2d[1]->probs[i][j] = 1.0;
+		}
+	}
+
+    int curRecIdx = 0;
+	for(j = 0; j < numStages-1; j++)
+		DataSet2d_iterate_stages_ctypes(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds, recIdxs, samplingProbs, &curRecIdx);
+
 	SuperCollection_reset(ds->collection[!(ds->recipientCollection)]);
 	SuperCollection_reset(ds->collection[(ds->recipientCollection)]);
 	DatConfig_free(&rootPanmictic);
@@ -263,6 +340,58 @@ void DataSet2d_print_good_probabilities(SuperCollection * recipient, DataSet2d *
     return;
 }
 
+void DataSet2d_record_good_probabilities_ctypes(SuperCollection * recipient, DataSet2d * ds, int ** recIdxs, double ** samplingProbs, int * p_curRecIdx)
+{
+    int i, j, k, l, good, spIdx;
+    DatConfig * curConfig;
+    SuperConfig * curSuperConfig;
+    DatConfig2d * curConfig2d;
+    int numPositions;
+    double probMultiplier;
+    for(i = 0; i < recipient->curNumSuperConfigs; i++)
+    {
+        curConfig = &(recipient->superConfigs[i]->panmictic);
+        curSuperConfig = recipient->superConfigs[i];
+        numPositions = curConfig->length;
+        good = 1;
+        for(j = 0; j < curConfig->length; j++)
+        {
+            if((curConfig->positions[j] > 0 && ds->initialNodes[j] == 0) || (curConfig->positions[j] == 0 && ds->initialNodes[j] == 1))
+            {
+                good = 0;
+                break;
+            }
+        }
+        if(good)
+        {
+            for(j = 0; j < curSuperConfig->numConfigs2d; j++)
+            {
+                curConfig2d = curSuperConfig->configs2d[j];
+                if(!ds->ordered)
+                    probMultiplier = (double)DataSet2d_get_prob_multiplier2(curConfig2d);
+                else
+                    probMultiplier = 1.0;
+
+                for(k = 0; k < numPositions; k++)
+                {
+                    recIdxs[*p_curRecIdx][k] = curConfig2d->positions[k][0];
+                    recIdxs[*p_curRecIdx][k+numPositions] = curConfig2d->positions[k][1];
+                }
+                spIdx = 0;
+                for(k = 0; k < ds->numThetas; k++)
+                {
+                    for(l = 0; l < ds->numMigRates; l++)
+                    {
+                        samplingProbs[*p_curRecIdx][spIdx] = curConfig2d->probs[k][l] * probMultiplier;
+                        spIdx++;
+                    }
+                }
+                (*p_curRecIdx)++;
+            }
+        }
+    }
+    return;
+}
 
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int printAll)
 {
@@ -271,6 +400,16 @@ void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipie
 	DataSet2d_solve_equations(recipient);
     if(printAll)
         DataSet2d_print_good_probabilities(recipient, ds);
+	ds->recipientCollection = !(ds->recipientCollection);
+	return;
+}
+
+void DataSet2d_iterate_stages_ctypes(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int ** recIdxs, double ** samplingProbs, int * p_curRecIdx)
+{
+	DataSet2d_transfer_config_collections(donor, recipient, ds);
+	DataSet2d_link_supercollections(donor, recipient, ds);
+	DataSet2d_solve_equations(recipient);
+    DataSet2d_record_good_probabilities_ctypes(recipient, ds, recIdxs, samplingProbs, p_curRecIdx);
 	ds->recipientCollection = !(ds->recipientCollection);
 	return;
 }

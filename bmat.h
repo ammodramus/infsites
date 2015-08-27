@@ -29,5 +29,6 @@ int BMat_get_Lj(BMat * bmat, BMat * Lij, int j);
 void BMat_get_haplotype_counts(BMat * bmat, int * numDuplicates, int * numUnique);
 int BMat_determine_good(BMat * bmat, BMat * Lij, int * Lj);
 int BMat_read_input(FILE * fin, BMat * bmat, int * numHaplotypes);
+int BMat_read_input_ctypes(char ** inp, BMat * bmat, int numHaplotypes);
 
 #endif

@@ -189,7 +189,6 @@ void DataSet_free(DataSet * ds)
 	NodeList_free(&(ds->nodeList));
 	free(ds->Lij);
 	free(ds->Lj);
-    free(ds->thetas);
 	return;
 }
 

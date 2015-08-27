@@ -101,18 +101,18 @@ void BMat2d_read_input(FILE * inp, BMat2d * bmat2d)
 	return;
 }
 
-void BMat2d_read_input_ctypes(char ** inp, int numHaplotypes, BMat2d * bmat2d)
+void BMat2d_read_input_ctypes(char ** inp, int * demes, int numHaplotypes, BMat2d * bmat2d)
 {
 	int i, j, deme, numSegSites;
 	char * line;
-	char haplotype[DEFAULT_MAX_LINE_SIZE];
 
     int mono = 1;
 
     // first process first line to get number of segregating sites
+
     for(i = 0; i < numHaplotypes; i++)
     {
-        if(!inp[i])
+        if(inp[i] == NULL)
         {
             fprintf(stderr, "missing line: %i\n", i);
             PERROR("missing input in BMat2d_read_input_ctypes()");
@@ -121,12 +121,9 @@ void BMat2d_read_input_ctypes(char ** inp, int numHaplotypes, BMat2d * bmat2d)
 
     // first, look at first line to determine number of segregating sites
     line = inp[0];
-    sscanf(line, "%s %i\n", haplotype, &deme); // *space* between %s and %i
-    numSegSites = (int)strlen(haplotype);
-    if(deme != 0 && deme != 1)
-        PERROR("Non 0/1 deme entry in two-deme input.");
-
+    numSegSites = (int)strlen(line);
     // now determine whether monomorphic or not
+    
     for(i = 0; i < numHaplotypes; i++)
     {
         for(j = 0; j < numSegSites; j++)
@@ -144,7 +141,7 @@ void BMat2d_read_input_ctypes(char ** inp, int numHaplotypes, BMat2d * bmat2d)
 	for(i = 0; i < numHaplotypes; i++)
 	{
         line = inp[i];
-        sscanf(line, "%s %i\n", haplotype, &deme);
+        deme = demes[i];
 		for(j = 0; j < numSegSites; j++)
 		{
 			if(line[j] == '\0' || line[j] == '\n')

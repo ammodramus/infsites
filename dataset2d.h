@@ -36,8 +36,10 @@ typedef struct dataset2d_
 
 void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int numThetas, double * thetas, int numMigRates, double * migRates, int printAll, int ordered, int genetree);
 void DataSet2d_solve_ctypes(DataSet2d * ds, BMat2d * inputbmat, int numThetas, double * thetas, int numMigRates, double * migRates, int ordered, int genetree, double * samplingProbs);
+void DataSet2d_solve_ctypes_all(DataSet2d * ds, BMat2d * inputbmat, int numThetas, double * thetas, int numMigRates, double * migRates, int ordered, int genetree, int ** recIdxs, double ** samplingProbs);
 void DataSet2d_free(DataSet2d * ds);
 void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int printAll);
+void DataSet2d_iterate_stages_ctypes(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds, int ** recIdxs, double ** samplingProbs, int * p_curRecIdx);
 void DataSet2d_solve_equations(SuperCollection * collection);
 void DataSet2d_donate_deriv_superconfigs(SuperConfig * super, SuperCollection * recipient, DataSet2d * ds);
 void DataSet2d_transfer_config_collections(SuperCollection * donor, SuperCollection * recipient, DataSet2d * ds);
