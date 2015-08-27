@@ -28,6 +28,7 @@ typedef struct dataset_
 } DataSet;
 
 void DataSet_init(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int printAll, int ordered);
+void DataSet_init_ctypes(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int ordered, double * samplingProbs);
 void DataSet_free(DataSet * ds);
 void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds);
 void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * recipient, Node ** idxToNode, DataSet * ds);

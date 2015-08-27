@@ -97,6 +97,92 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas
 	return;
 }
 
+void DataSet_init_ctypes(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int ordered, double * samplingProbs)
+{
+	int i,j,k, zeroFirst, numStages;
+	ds->bmat = inputbmat;
+	ds->numSegSites = inputbmat->ncols;
+	ds->numSamples = inputbmat->nrows;
+	numStages = ds->numSegSites + ds->numSamples;
+	ds->numThetas = numThetas;
+	ds->thetas = thetas;
+
+    ds->printAll = 0;
+
+	ds->collection[0] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
+	CHECKPOINTER(ds->collection[0]);
+	ds->collection[1] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
+	CHECKPOINTER(ds->collection[1]);
+	/* there are one more nodes in the phylogeny than
+	 * segregating sites. */
+	BMat_order_columns(ds->bmat);
+    ds->ordered = ordered;
+
+    // check for and then create a perfect phylogeny according to the
+    // algorithms of Gusfield (1991) "Efficient Algorithms for Inferring
+    // Evolutionary Trees."
+	ds->Lij = (BMat *)malloc(sizeof(BMat));
+	CHECKPOINTER(ds->Lij);
+	BMat_init(ds->Lij, ds->bmat->nrows, ds->bmat->ncols);
+	for(i = 0; i < ds->bmat->nrows; i++)
+		for(j = 0; j < ds->bmat->ncols; j++)
+			ds->Lij->mat[i][j] = BMat_get_Lij(ds->bmat, i, j);
+	ds->Lj = (int *)malloc(sizeof(int) * (size_t)ds->bmat->ncols);
+	CHECKPOINTER(ds->Lj);
+	for(j = 0; j < ds->bmat->ncols; j++)
+		ds->Lj[j] = BMat_get_Lj(ds->bmat, ds->Lij, j);
+	if(!BMat_determine_good(ds->bmat, ds->Lij, ds->Lj))
+		PERROR("Data does not conform to infinite-sites mutation model.");
+	NodeList_create_phylogeny(&(ds->nodeList), ds->bmat, ds->Lj);
+	NodeList_get_num_children(&(ds->nodeList));
+	NodeList_get_idxToNode(&(ds->nodeList));
+	DatConfig_init(&(ds->refConfig), ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_get_ref_config(ds->bmat, &(ds->refConfig));
+
+
+	DatConfig rootConfig;
+	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_set_root_config(&rootConfig);
+
+    ds->initialNodes = (int *)malloc(sizeof(int) * (size_t)(ds->refConfig.length));
+    CHECKPOINTER(ds->initialNodes);
+    DatConfig_set_initial_node_indices(&ds->refConfig, ds->initialNodes);
+
+	/* initialize the ConfigCollections, and then add the root configuration to
+	 * the first Collection, and off we go! */
+	ConfigCollection_init(ds->collection[0], ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	ConfigCollection_init(ds->collection[1], ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	ConfigCollection_add_config(ds->collection[0], &rootConfig);
+	zeroFirst = 0;
+	for(i = 0; i < numStages-1; i++)
+	{
+		DataSet_transfer_config_collections(ds->collection[zeroFirst], ds->collection[!zeroFirst], ds);
+		zeroFirst = !zeroFirst;
+	}
+
+
+    if(!ds->ordered)
+        ds->probMultiplier = DataSet_get_prob_multiplier(ds->bmat);
+    else
+        ds->probMultiplier = 1.0;
+    double finalProb;
+    for(k = 0; k < ds->numThetas; k++)
+    {
+        finalProb = ConfigCollection_get_final_prob(ds->collection[zeroFirst], k) * (double)ds->probMultiplier;
+        samplingProbs[k] = finalProb;
+    }
+
+	// freeing memory
+	ConfigCollection_free(ds->collection[0]);
+	ConfigCollection_free(ds->collection[1]);
+	free(ds->collection[0]);
+	free(ds->collection[1]);
+	DatConfig_free(&(ds->refConfig));
+	DatConfig_free(&rootConfig);
+    free(ds->initialNodes);
+	return;
+}
+
 void DataSet_free(DataSet * ds)
 {
 	BMat_free(ds->Lij);

@@ -367,6 +367,38 @@ void solve_D1(FILE * fin, int numThetas, double * thetas, int printAll, int orde
 	return;
 }
 
+void solve_D1_ctypes(char ** inp, int numHaplotypes, int numThetas, double * thetas, int ordered, double * samplingProbs)
+{
+	int i, j, k;
+	double theta, prob;
+	BMat bmat;
+	//int mono = check_mono_D1(fin);
+    
+    int mono = BMat_read_input_ctypes(inp, &bmat, numHaplotypes);
+
+	if(!mono)
+	{
+		DataSet ds;
+//void DataSet_init_ctypes(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int ordered, double * samplingProbs)
+		DataSet_init_ctypes(&ds, &bmat, numThetas, thetas, ordered, samplingProbs); // 0 for printAll argument
+		DataSet_free(&ds);
+		BMat_free(&bmat);
+	}
+	else // mono
+	{
+        for(k = 0; k < numThetas; k++)
+        {
+            theta = thetas[k];
+            prob = 1.0;
+            for(i = numHaplotypes-1; i > 0; i--)
+                prob *= (double)i / ((double)i + theta);
+            samplingProbs[k] = prob;
+        }
+        BMat_free(&bmat);
+    }
+	return;
+}
+
 void solve_D2(FILE * fin, int numThetas, double * thetas, int numMigRates, double * migRates, int printAll, int ordered, int genetree)
 {
 	BMat2d b2;

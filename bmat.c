@@ -228,6 +228,42 @@ int BMat_read_input(FILE * inp, BMat * bmat, int * numHaplotypes)
 	return mono;
 }
 
+int BMat_read_input_ctypes(char ** inp, BMat * bmat, int numHaplotypes)
+{
+	int i, j, numSegSites;
+	char * line;
+
+    for(i = 0; i < numHaplotypes; i++)
+    {
+        if(!inp[i])
+        {
+            fprintf(stderr, "missing line: %i\n", i);
+            PERROR("missing input in BMat2d_read_input_ctypes()");
+        }
+    }
+
+    numSegSites = (int)strlen(inp[0]);
+	
+	BMat_init(bmat, numHaplotypes, numSegSites);
+    int mono = 1;
+	for(i = 0; i < numHaplotypes; i++)
+	{
+        line = inp[i];
+		for(j = 0; j < numSegSites; j++)
+		{
+			if(line[j] != '0' && line[j] != '1')
+			{
+				fprintf(stdout, "%c", line[j]);
+				PERROR("non 0/1 character in input.");
+			}
+            if(line[j] == '1')
+                mono = 0;
+			bmat->mat[i][j] = line[j] - '0';
+		}
+	}
+	return mono;
+}
+
 /* This is a fairly complicated way of looking at a number of rows of things
  * and determining the counts of each unique row. It makes every comparison
  * between rows i and ii except when ii has already been matched to something
