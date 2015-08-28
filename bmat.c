@@ -238,7 +238,7 @@ int BMat_read_input_ctypes(char ** inp, BMat * bmat, int numHaplotypes)
         if(!inp[i])
         {
             fprintf(stderr, "missing line: %i\n", i);
-            PERROR("missing input in BMat2d_read_input_ctypes()");
+            PERROR("missing input in BMat_read_input_ctypes()");
         }
     }
 

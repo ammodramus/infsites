@@ -183,6 +183,82 @@ void DataSet_init_ctypes(DataSet * ds, BMat * inputbmat, int numThetas, double *
 	return;
 }
 
+void DataSet_init_ctypes_all(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int ordered, int ** recIdxs, double ** samplingProbs)
+{
+	int i,j, zeroFirst, numStages;
+	ds->bmat = inputbmat;
+	ds->numSegSites = inputbmat->ncols;
+	ds->numSamples = inputbmat->nrows;
+	numStages = ds->numSegSites + ds->numSamples;
+	ds->numThetas = numThetas;
+	ds->thetas = thetas;
+
+    ds->printAll = 1;
+
+	ds->collection[0] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
+	CHECKPOINTER(ds->collection[0]);
+	ds->collection[1] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
+	CHECKPOINTER(ds->collection[1]);
+	/* there are one more nodes in the phylogeny than
+	 * segregating sites. */
+	BMat_order_columns(ds->bmat);
+    ds->ordered = ordered;
+
+    // check for and then create a perfect phylogeny according to the
+    // algorithms of Gusfield (1991) "Efficient Algorithms for Inferring
+    // Evolutionary Trees."
+	ds->Lij = (BMat *)malloc(sizeof(BMat));
+	CHECKPOINTER(ds->Lij);
+	BMat_init(ds->Lij, ds->bmat->nrows, ds->bmat->ncols);
+	for(i = 0; i < ds->bmat->nrows; i++)
+		for(j = 0; j < ds->bmat->ncols; j++)
+			ds->Lij->mat[i][j] = BMat_get_Lij(ds->bmat, i, j);
+	ds->Lj = (int *)malloc(sizeof(int) * (size_t)ds->bmat->ncols);
+	CHECKPOINTER(ds->Lj);
+	for(j = 0; j < ds->bmat->ncols; j++)
+		ds->Lj[j] = BMat_get_Lj(ds->bmat, ds->Lij, j);
+	if(!BMat_determine_good(ds->bmat, ds->Lij, ds->Lj))
+		PERROR("Data does not conform to infinite-sites mutation model.");
+	NodeList_create_phylogeny(&(ds->nodeList), ds->bmat, ds->Lj);
+	NodeList_get_num_children(&(ds->nodeList));
+	NodeList_get_idxToNode(&(ds->nodeList));
+	DatConfig_init(&(ds->refConfig), ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_get_ref_config(ds->bmat, &(ds->refConfig));
+
+
+	DatConfig rootConfig;
+	DatConfig_init(&rootConfig, ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	DatConfig_set_root_config(&rootConfig);
+
+    ds->initialNodes = (int *)malloc(sizeof(int) * (size_t)(ds->refConfig.length));
+    CHECKPOINTER(ds->initialNodes);
+    DatConfig_set_initial_node_indices(&ds->refConfig, ds->initialNodes);
+
+	/* initialize the ConfigCollections, and then add the root configuration to
+	 * the first Collection, and off we go! */
+	ConfigCollection_init(ds->collection[0], ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	ConfigCollection_init(ds->collection[1], ds->bmat->ncols+1, ds->nodeList.numChildren, ds->numThetas);
+	ConfigCollection_add_config(ds->collection[0], &rootConfig);
+	zeroFirst = 0;
+    int curRearr = 0;
+	for(i = 0; i < numStages-1; i++)
+	{
+		DataSet_transfer_config_collections_ctypes_all(ds->collection[zeroFirst], ds->collection[!zeroFirst], ds, recIdxs, samplingProbs, &curRearr);
+		zeroFirst = !zeroFirst;
+	}
+
+
+	// freeing memory
+	ConfigCollection_free(ds->collection[0]);
+	ConfigCollection_free(ds->collection[1]);
+	free(ds->collection[0]);
+	free(ds->collection[1]);
+	DatConfig_free(&(ds->refConfig));
+	DatConfig_free(&rootConfig);
+    free(ds->initialNodes);
+	return;
+}
+
 void DataSet_free(DataSet * ds)
 {
 	BMat_free(ds->Lij);
@@ -227,6 +303,40 @@ void DataSet_print_good_probabilities(ConfigCollection * collection, DataSet * d
     return;
 }
 
+void DataSet_record_good_probabilities(ConfigCollection * collection, DataSet * ds, int ** recIdxs, double ** samplingProbs, int * p_curRearr)
+{
+    int i, k, good;
+    DatConfig * config;
+    for(i = 0; i < collection->curNumConfigs; i++)
+    {
+        config = collection->configs[i];
+        good = 1;
+        for(k = 0; k < config->length; k++)
+        {
+            if( (config->positions[k] > 0 && ds->initialNodes[k] == 0) || (config->positions[k] == 0 && ds->initialNodes[k] == 1) )
+            {
+                good = 0;
+                break;
+            }
+        }
+        if(good)
+        {
+            // must calculate multinomial multiplier for each good DatConfig
+            double probMultiplier;
+            if(!ds->ordered)
+                probMultiplier = (double)DataSet_get_prob_multiplier2(config);
+            else
+                probMultiplier = 1.0;
+            for(k = 0; k < config->length; k++)
+                recIdxs[*p_curRearr][k] = config->positions[k];
+            for(k = 0; k < ds->numThetas; k++)
+                samplingProbs[*p_curRearr][k] = config->probs[k] * probMultiplier;
+            (*p_curRearr)++;
+        }
+    }
+    return;
+}
+
 void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds)
 {
 	int i;
@@ -235,6 +345,17 @@ void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollect
 		DataSet_donate_deriv_configs(donor->configs[i], recipient, ds->nodeList.idxToNode, ds);
     if(ds->printAll)
         DataSet_print_good_probabilities(recipient, ds);
+	HashTable_reset(&(donor->hashTable));
+	return;
+}
+
+void DataSet_transfer_config_collections_ctypes_all(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds, int ** recIdxs, double ** samplingProbs, int * p_curRearr)
+{
+	int i;
+	ConfigCollection_reset(recipient);
+	for(i = 0; i < donor->curNumConfigs; i++)
+		DataSet_donate_deriv_configs(donor->configs[i], recipient, ds->nodeList.idxToNode, ds);
+    DataSet_record_good_probabilities(recipient, ds, recIdxs, samplingProbs, p_curRearr);
 	HashTable_reset(&(donor->hashTable));
 	return;
 }

@@ -373,7 +373,6 @@ void solve_D1_ctypes(char ** inp, const int numHaplotypes, const int numThetas, 
 	int i, k;
 	double theta, prob;
 	BMat bmat;
-	//int mono = check_mono_D1(fin);
     
     int mono = BMat_read_input_ctypes(inp, &bmat, numHaplotypes);
 
@@ -398,6 +397,85 @@ void solve_D1_ctypes(char ** inp, const int numHaplotypes, const int numThetas, 
     }
 	return;
 }
+
+void solve_D1_ctypes_all(char ** inp, int numHaplotypes, int numThetas, double * thetas, int ordered, int ** recIdxs, double ** samplingProbs)
+{
+	int i, j, k;
+	double theta, prob;
+	BMat bmat;
+	//int mono = check_mono_D1(fin);
+    
+    int mono = BMat_read_input_ctypes(inp, &bmat, numHaplotypes);
+
+	if(!mono)
+	{
+		DataSet ds;
+		DataSet_init_ctypes_all(&ds, &bmat, numThetas, thetas, ordered, recIdxs, samplingProbs);
+		DataSet_free(&ds);
+		BMat_free(&bmat);
+	}
+	else // mono
+	{
+        int rearrCounter = 0;
+        BMat_free(&bmat);
+        for(i = numHaplotypes; i > 0; i--)
+        {
+            recIdxs[rearrCounter][0] = i;
+            for(j = 0; j < numThetas; j++)
+            {
+                theta = thetas[j];
+                prob = 1.0;
+                for(k = 1; k < i; k++)
+                    prob *= (double)k / ((double)k + theta);
+                samplingProbs[rearrCounter][j] = prob;
+            }
+            rearrCounter++;
+        }
+    }
+	return;
+}
+
+void test_solve_D1_ctypes_all()
+{
+    int i, j;
+    char ** seqs = (char **)malloc(sizeof(char *) * 4);
+    seqs[0] = (char *)malloc(sizeof(char) * 10);
+    seqs[1] = (char *)malloc(sizeof(char) * 10);
+    seqs[2] = (char *)malloc(sizeof(char) * 10);
+    seqs[3] = (char *)malloc(sizeof(char) * 10);
+
+    strcpy(seqs[0], "110");
+    strcpy(seqs[1], "101");
+    strcpy(seqs[2], "000");
+    strcpy(seqs[3], "101");
+
+    double thetas[2] = {1.0, 2.0};
+
+    int numReconfigs = 2;
+
+    int ** recIdxs = (int **)malloc(sizeof(int *) * numReconfigs);
+    double ** sampProbs = (double **)malloc(sizeof(int *) * numReconfigs);
+    for(i = 0; i < numReconfigs; i++)
+    {
+        recIdxs[i] = (int *)malloc(sizeof(int) * 4);
+        sampProbs[i] = (double *)malloc(sizeof(double) * 2);
+    }
+
+    solve_D1_ctypes_all(seqs, 4, 2, &(thetas[0]), 1, (int **)recIdxs, (double **)sampProbs);
+
+    for(i = 0; i < numReconfigs; i++)
+    {
+        for(j = 0; j < 4; j++)
+            printf("%i ", recIdxs[i][j]);
+        printf(": ");
+        for(j = 0; j < 2; j++)
+            printf("%e ", sampProbs[i][j]);
+        printf("\n");
+    }
+    return;
+}
+
+
 
 void solve_D2(FILE * fin, int numThetas, double * thetas, int numMigRates, double * migRates, int printAll, int ordered, int genetree)
 {
@@ -472,11 +550,6 @@ void solve_D2_ctypes(char ** input, int * demes, int numHaplotypes, int numTheta
 
 	BMat2d_read_input_ctypes(input, demes, numHaplotypes, &b2);
 	DataSet2d_solve_ctypes(&ds, &b2, numThetas, thetasP, numMigRates, migRates, ordered, genetree, samplingProbs);
-    REPORTF(thetasP[0]);
-    REPORTF(thetasP[1]);
-    REPORTF(migRates[0]);
-    REPORTF(migRates[1]);
-
 	BMat2d_free(&b2);
     free(thetasP);
 	return;
@@ -507,11 +580,6 @@ void solve_D2_ctypes_all(char ** input, int * demes, int numHaplotypes, int numT
     }
 
 	BMat2d_read_input_ctypes(input, demes, numHaplotypes, &b2);
-    REPORTF(thetasP[0]);
-    REPORTF(thetasP[1]);
-    REPORTF(migRates[0]);
-    REPORTF(migRates[1]);
-
 	DataSet2d_solve_ctypes_all(&ds, &b2, numThetas, thetasP, numMigRates, migRates, ordered, genetree, recIdxs, samplingProbs);
 	BMat2d_free(&b2);
     free(thetasP);
@@ -614,7 +682,8 @@ void SolverOptions_run_program(SolverOptions * opt)
 
 int main(int argc, char ** argv)
 {
-    //test_solve_D2_ctypes_all();
+    //void test_solve_D1_ctypes_all()
+    //test_solve_D1_ctypes_all();
 	SolverOptions opt;
 	SolverOptions_parse_options(argc, argv, &opt);
 	SolverOptions_run_program(&opt);

@@ -29,8 +29,10 @@ typedef struct dataset_
 
 void DataSet_init(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int printAll, int ordered);
 void DataSet_init_ctypes(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int ordered, double * samplingProbs);
+void DataSet_init_ctypes_all(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas, int ordered, int ** recIdxs, double ** samplingProbs);
 void DataSet_free(DataSet * ds);
 void DataSet_transfer_config_collections(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds);
+void DataSet_transfer_config_collections_ctypes_all(ConfigCollection * donor, ConfigCollection * recipient, DataSet * ds, int ** recIdxs, double ** samplingProbs, int * p_curRearr);
 void DataSet_donate_deriv_configs(DatConfig * curConfig, ConfigCollection * recipient, Node ** idxToNode, DataSet * ds);
 int DataSet_binomial_coeff_(int n, int k);
 int DataSet_get_prob_multiplier(BMat * bmat);
