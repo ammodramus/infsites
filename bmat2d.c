@@ -122,6 +122,7 @@ void BMat2d_read_input_ctypes(char ** inp, int * demes, int numHaplotypes, BMat2
     // first, look at first line to determine number of segregating sites
     line = inp[0];
     numSegSites = (int)strlen(line);
+    REPORTI(numSegSites);
     // now determine whether monomorphic or not
     
     for(i = 0; i < numHaplotypes; i++)

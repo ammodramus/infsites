@@ -452,6 +452,12 @@ void solve_D2_ctypes(char ** input, int * demes, int numHaplotypes, int numTheta
 	DataSet2d ds;
 	int k;
 
+    double * thetasP = (double *)malloc(sizeof(double) * numThetas);
+    CHECKPOINTER(thetasP);
+
+    for(k = 0; k < numThetas; k++)
+        thetasP[k] = thetas[k];
+
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
     //// to make probabilities maximally compatible with *genetree*, which     /////
@@ -461,11 +467,13 @@ void solve_D2_ctypes(char ** input, int * demes, int numHaplotypes, int numTheta
     if(genetree)
     {
         for(k = 0; k < numThetas; k++)
-            thetas[k] /= 2.0;
+            thetasP[k] /= 2.0;
     }
 
 	BMat2d_read_input_ctypes(input, demes, numHaplotypes, &b2);
-	DataSet2d_solve_ctypes(&ds, &b2, numThetas, thetas, numMigRates, migRates, ordered, genetree, samplingProbs);
+	DataSet2d_solve_ctypes(&ds, &b2, numThetas, thetasP, numMigRates, migRates, ordered, genetree, samplingProbs);
+    REPORTF(thetasP[0]);
+    REPORTF(thetasP[1]);
 	BMat2d_free(&b2);
 	return;
 }
@@ -476,6 +484,12 @@ void solve_D2_ctypes_all(char ** input, int * demes, int numHaplotypes, int numT
 	DataSet2d ds;
 	int k;
 
+    double * thetasP = (double *)malloc(sizeof(double) * numThetas);
+    CHECKPOINTER(thetasP);
+
+    for(k = 0; k < numThetas; k++)
+        thetasP[k] = thetas[k];
+
     ////////////////////////////////////////////////////////////////////////////////
     ////////////////////////////////////////////////////////////////////////////////
     //// to make probabilities maximally compatible with *genetree*, which     /////
@@ -485,11 +499,13 @@ void solve_D2_ctypes_all(char ** input, int * demes, int numHaplotypes, int numT
     if(genetree)
     {
         for(k = 0; k < numThetas; k++)
-            thetas[k] /= 2.0;
+            thetasP[k] /= 2.0;
     }
 
 	BMat2d_read_input_ctypes(input, demes, numHaplotypes, &b2);
-	DataSet2d_solve_ctypes_all(&ds, &b2, numThetas, thetas, numMigRates, migRates, ordered, genetree, recIdxs, samplingProbs);
+    REPORTF(thetasP[0]);
+    REPORTF(thetasP[1]);
+	DataSet2d_solve_ctypes_all(&ds, &b2, numThetas, thetasP, numMigRates, migRates, ordered, genetree, recIdxs, samplingProbs);
 	BMat2d_free(&b2);
 	return;
 }
@@ -507,14 +523,14 @@ void test_solve_D2_ctypes()
     seqs[6] = (char *)malloc(sizeof(char) * 10);
     seqs[7] = (char *)malloc(sizeof(char) * 10);
 
-    strcpy(seqs[0], "000 0\n");
-    strcpy(seqs[1], "000 0\n");
-    strcpy(seqs[2], "100 0\n");
-    strcpy(seqs[3], "100 0\n");
-    strcpy(seqs[4], "010 1\n");
-    strcpy(seqs[5], "010 1\n");
-    strcpy(seqs[6], "011 1\n");
-    strcpy(seqs[7], "011 1\n");
+    strcpy(seqs[0], "000 0");
+    strcpy(seqs[1], "000 0");
+    strcpy(seqs[2], "100 0");
+    strcpy(seqs[3], "100 0");
+    strcpy(seqs[4], "010 1");
+    strcpy(seqs[5], "010 1");
+    strcpy(seqs[6], "011 1");
+    strcpy(seqs[7], "011 1");
     double * sp = (double *)malloc(sizeof(double) * 8);
     double thetas[2] = {1.0, 2.0};
     double migRates[2] = {3.0, 4.0};
@@ -537,10 +553,11 @@ void test_solve_D2_ctypes_all()
     seqs[2] = (char *)malloc(sizeof(char) * 10);
     seqs[3] = (char *)malloc(sizeof(char) * 10);
 
-    strcpy(seqs[0], "100\n");
-    strcpy(seqs[1], "101\n");
-    strcpy(seqs[2], "100\n");
-    strcpy(seqs[3], "010\n");
+    strcpy(seqs[0], "110");
+    strcpy(seqs[1], "101");
+    strcpy(seqs[2], "000");
+    strcpy(seqs[3], "101");
+
     double thetas[2] = {1.0, 2.0};
     double migRates[2] = {3.0, 4.0};
 
@@ -548,17 +565,23 @@ void test_solve_D2_ctypes_all()
 
     int numReconfigs = 20;
 
-    int recIdxs[20][8] = {0};
-    double sampProbs[20][8] = {0.0};
+    int ** recIdxs = (int **)malloc(sizeof(int *) * numReconfigs);
+    double ** sampProbs = (double **)malloc(sizeof(int *) * numReconfigs);
+    for(i = 0; i < numReconfigs; i++)
+    {
+        recIdxs[i] = (int *)malloc(sizeof(int) * 8);
+        sampProbs[i] = (double *)malloc(sizeof(double) * 4);
+    }
 
-    double * sp = (double *)malloc(sizeof(double) * 8);
+    double * sp = (double *)malloc(sizeof(double) * 4);
+
     solve_D2_ctypes(seqs, (int *)demes, 4, 2, thetas, 2, migRates, 1, 1, sp);
 
     for(i = 0; i < 4; i++)
-        printf("%f ", sp[i]);
+        printf("%e ", sp[i]);
     printf("\n");
 
-    solve_D2_ctypes_all(seqs, (int *)demes, 4, 2, (double *)thetas, 2, (double *)migRates, 1, 1, (int **)recIdxs, (double **)sampProbs);
+    solve_D2_ctypes_all(seqs, (int *)demes, 4, 2, &(thetas[0]), 2, &(migRates[0]), 1, 1, (int **)recIdxs, (double **)sampProbs);
 
     for(i = 0; i < numReconfigs; i++)
     {
@@ -566,7 +589,7 @@ void test_solve_D2_ctypes_all()
             printf("%i ", recIdxs[i][j]);
         printf(": ");
         for(j = 0; j < 4; j++)
-            printf("%f ", sampProbs[i][j]);
+            printf("%e ", sampProbs[i][j]);
         printf("\n");
     }
     return;
