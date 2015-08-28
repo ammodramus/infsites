@@ -33,7 +33,12 @@ void DataSet2d_init(DataSet2d * ds, BMat2d * inputbmat, int numThetas, double * 
 	ds->collection[1] = (SuperCollection *)malloc(sizeof(SuperCollection));
 	CHECKPOINTER(ds->collection[1]);
 	BMat_order_columns(&(ds->bmat2d->bmat));
-	probMultiplier = DataSet2d_get_prob_multiplier(ds);
+
+    if(ds->ordered)
+        probMultiplier = 1;
+    else // unordered
+        probMultiplier = DataSet2d_get_prob_multiplier(ds);
+
 	ds->Lij = (BMat *)malloc(sizeof(BMat));
 	CHECKPOINTER(ds->Lij);
 	BMat_init(ds->Lij, ds->bmat2d->nrows, ds->bmat2d->ncols);
@@ -126,7 +131,12 @@ void DataSet2d_solve_ctypes(DataSet2d * ds, BMat2d * inputbmat, int numThetas, d
 	ds->collection[1] = (SuperCollection *)malloc(sizeof(SuperCollection));
 	CHECKPOINTER(ds->collection[1]);
 	BMat_order_columns(&(ds->bmat2d->bmat));
-	probMultiplier = DataSet2d_get_prob_multiplier(ds);
+
+    if(ds->ordered)
+        probMultiplier = 1;
+    else
+        probMultiplier = DataSet2d_get_prob_multiplier(ds);
+
 	ds->Lij = (BMat *)malloc(sizeof(BMat));
 	CHECKPOINTER(ds->Lij);
 	BMat_init(ds->Lij, ds->bmat2d->nrows, ds->bmat2d->ncols);
@@ -279,6 +289,8 @@ void DataSet2d_free(DataSet2d * ds)
 	SuperCollection_free(ds->collection[1]);
 	NodeList_free(&(ds->nodeList));
 	DatConfig2d_free(&(ds->refConfig2d));
+    if(ds->initialNodes)
+        free(ds->initialNodes);
 	free(ds->collection[0]);
 	free(ds->collection[1]);
 	free(ds->Lij);

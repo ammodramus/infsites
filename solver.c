@@ -474,7 +474,11 @@ void solve_D2_ctypes(char ** input, int * demes, int numHaplotypes, int numTheta
 	DataSet2d_solve_ctypes(&ds, &b2, numThetas, thetasP, numMigRates, migRates, ordered, genetree, samplingProbs);
     REPORTF(thetasP[0]);
     REPORTF(thetasP[1]);
+    REPORTF(migRates[0]);
+    REPORTF(migRates[1]);
+
 	BMat2d_free(&b2);
+    free(thetasP);
 	return;
 }
 
@@ -505,8 +509,12 @@ void solve_D2_ctypes_all(char ** input, int * demes, int numHaplotypes, int numT
 	BMat2d_read_input_ctypes(input, demes, numHaplotypes, &b2);
     REPORTF(thetasP[0]);
     REPORTF(thetasP[1]);
+    REPORTF(migRates[0]);
+    REPORTF(migRates[1]);
+
 	DataSet2d_solve_ctypes_all(&ds, &b2, numThetas, thetasP, numMigRates, migRates, ordered, genetree, recIdxs, samplingProbs);
 	BMat2d_free(&b2);
+    free(thetasP);
 	return;
 }
 
@@ -606,11 +614,9 @@ void SolverOptions_run_program(SolverOptions * opt)
 
 int main(int argc, char ** argv)
 {
-    test_solve_D2_ctypes_all();
-    /*
+    //test_solve_D2_ctypes_all();
 	SolverOptions opt;
 	SolverOptions_parse_options(argc, argv, &opt);
 	SolverOptions_run_program(&opt);
-    */
 	return 0;
 }
