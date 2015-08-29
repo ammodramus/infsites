@@ -233,6 +233,7 @@ int BMat_read_input_ctypes(char ** inp, BMat * bmat, int numHaplotypes)
 	int i, j, numSegSites;
 	char * line;
 
+
     for(i = 0; i < numHaplotypes; i++)
     {
         if(!inp[i])
