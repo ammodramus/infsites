@@ -113,8 +113,8 @@ int BMat_compare_columns_(const void * pair1, const void * pair2)
 void BMat_order_columns(BMat * bmat)
 {
 	int i, j;
-	int nrows = bmat->nrows;
-	int ncols = bmat->ncols;
+	const int nrows = bmat->nrows;
+	const int ncols = bmat->ncols;
 	int * binNums = (int *)malloc(sizeof(int) * (size_t)ncols);
 	CHECKPOINTER(binNums);
 	for(j = 0; j < ncols; j++)
