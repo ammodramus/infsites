@@ -27,12 +27,7 @@ void DataSet_init(DataSet * ds, BMat * inputbmat, int numThetas, double * thetas
 	/* there are one more nodes in the phylogeny than
 	 * segregating sites. */
 
-    printf("\n(before column sort)\n");
-    BMat_print(ds->bmat, stdout);
 	BMat_order_columns(ds->bmat);
-    printf("\n(after column sort)\n");
-    BMat_print(ds->bmat, stdout);
-    printf("\n");
 
     ds->ordered = ordered;
 
@@ -206,14 +201,9 @@ void DataSet_init_ctypes_all(DataSet * ds, BMat * inputbmat, int numThetas, doub
 	CHECKPOINTER(ds->collection[0]);
 	ds->collection[1] = (ConfigCollection *)malloc(sizeof(ConfigCollection));
 	CHECKPOINTER(ds->collection[1]);
-	/* there are one more nodes in the phylogeny than
-	 * segregating sites. */
-    printf("\n(before column sort)\n");
-    BMat_print(ds->bmat, stdout);
+
 	BMat_order_columns(ds->bmat);
-    printf("\n(after column sort)\n");
-    BMat_print(ds->bmat, stdout);
-    printf("\n");
+
     ds->ordered = ordered;
 
     // check for and then create a perfect phylogeny according to the
@@ -340,10 +330,7 @@ void DataSet_record_good_probabilities(ConfigCollection * collection, DataSet * 
             else
                 probMultiplier = 1.0;
             for(k = 0; k < config->length; k++)
-            {
-                REPORTI(config->positions[k]);
                 recIdxs[*p_curRearr][k] = config->positions[k];
-            }
             for(k = 0; k < ds->numThetas; k++)
                 samplingProbs[*p_curRearr][k] = config->probs[k] * probMultiplier;
             (*p_curRearr)++;

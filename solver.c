@@ -406,7 +406,6 @@ void solve_D1_ctypes_all(char ** inp, int numHaplotypes, int numThetas, double *
 	//int mono = check_mono_D1(fin);
     
     int mono = BMat_read_input_ctypes(inp, &bmat, numHaplotypes);
-    BMat_print(&bmat, stderr);
 
 	if(!mono)
 	{
