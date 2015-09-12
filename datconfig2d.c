@@ -3,12 +3,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include "definitions.h"
-#ifndef CSPARSECOMPILE
 #include "matrix.h"
-#endif
-#ifdef CSPARSECOMPILE
-#include "matrix2.h"
-#endif
 #include "bmat.h"
 #include "bmat2d.h"
 #include "hash.h"

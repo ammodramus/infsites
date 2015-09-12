@@ -4,13 +4,7 @@
 #include "datconfig.h"
 #include "definitions.h"
 #include "hash.h"
-//#include "matrix2.h"  // CSPARSE EDIT
-#ifndef CSPARSECOMPILE
 #include "matrix.h"
-#endif
-#ifdef CSPARSECOMPILE
-#include "matrix2.h"
-#endif
 
 #define DEFAULT_SUPER_COLLECTION_NUMSUPERCONFIGS 1000
 #define DEFAULT_SUPER_COLLECTION_INCREASE 1000

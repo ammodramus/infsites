@@ -441,14 +441,7 @@ void DataSet2d_solve_equations(SuperCollection * collection)
 				SuperEquations_solve(&(collection->superConfigs[i]->eqs[k][l]));
 				for(j = 0; j < collection->superConfigs[i]->numConfigs2d; j++)
 				{
-#ifndef CSPARSECOMPILE
-					//printf("collection->superConfigs[%i]->eq.x[%i] = %f\n", i, j, collection->superConfigs[i]->eq.x[j]);
-					collection->superConfigs[i]->configs2d[j]->probs[k][l] = collection->superConfigs[i]->eqs[k][l].x[j];
-#endif
-#ifdef CSPARSECOMPILE
-					//printf("collection->superConfigs[%i]->eq.b[%i] = %f\n", i, j, collection->superConfigs[i]->eq.b[j]);
 					collection->superConfigs[i]->configs2d[j]->probs[k][l] = collection->superConfigs[i]->eqs[k][l].b[j];   //CSPARSE EDIT
-#endif
 				}
 			}
 		}
