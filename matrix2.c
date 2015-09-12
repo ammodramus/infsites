@@ -10,8 +10,6 @@ void SuperEquations_init(SuperEquations * eq, int nrows, int ncols, int nz)
 	eq->A = cs_spalloc(nrows, ncols, nz, nz, 1);
 	eq->b = (double *)calloc((size_t)nrows, sizeof(double));
 	CHECKPOINTER(eq->b);
-	//eq->x = (double *)malloc(sizeof(double) * nrows);
-	//CHECKPOINTER(eq->x);
 	return;
 }
 
@@ -19,13 +17,11 @@ void SuperEquations_free(SuperEquations * eq)
 {
 	cs_spfree(eq->A);
 	free(eq->b);
-	//free(eq->x);
 	return;
 }
 
 void SuperEquations_add_entry(SuperEquations * eq, int rowIdx, int colIdx, double value)
 {
-	//printf("%i,%i = %f\n", rowIdx, colIdx, value);
 	cs_entry(eq->A, rowIdx, colIdx, value);
 	return;
 }
@@ -33,7 +29,6 @@ void SuperEquations_add_entry(SuperEquations * eq, int rowIdx, int colIdx, doubl
 void SuperEquations_add_b_value(SuperEquations * eq, double prob, int idx)
 {
 	eq->b[idx] += prob;
-	//printf("b[%i] = %f\n", idx, eq->b[idx]);
 	return;
 }
 
@@ -46,11 +41,13 @@ void SuperEquations_add_b_value(SuperEquations * eq, double prob, int idx)
 void SuperEquations_solve(SuperEquations * eq)
 {
 	// convert to compressed column format
-	eq->A = cs_triplet(eq->A);
+    cs * Atrip = cs_triplet(eq->A);
+    cs_spfree(eq->A);
 	// use cholsol
 	//if(!cs_cholsol(eq->A, eq->b, 0))
-	if(!cs_qrsol(eq->A, eq->b, 0))
+	if(!cs_qrsol(Atrip, eq->b, 0))
 		PERROR("Cholesky solve error (PW)");
+    eq->A = Atrip;
 	return;
 }
 

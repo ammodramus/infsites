@@ -31,16 +31,12 @@ typedef struct superconfig_
 {
 	DatConfig panmictic;
 	DatConfig2d ** configs2d;
-	//int curNumConfigs2d; -- no longer necessary, calculating the index each time.
 	int numConfigs2d;
 	int configLength;
 	int * numChildren;
 	int * positionMultipliers;
-	// array of int's to multiply against, used to get the matrix /
-	// DatConfig2d array index from a particular DatConfig2d's positions array.
 	int numThetas;
 	int numMigRates;
-	// for multiple thetas and migration rates
 	SuperEquations ** eqs;
 	struct superconfig_ * next;
 } SuperConfig;

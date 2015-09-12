@@ -184,6 +184,7 @@ void DataSet2d_solve_ctypes(DataSet2d * ds, BMat2d * inputbmat, int numThetas, d
 
 	for(j = 0; j < numStages-1; j++)
 		DataSet2d_iterate_stages(ds->collection[!(ds->recipientCollection)], ds->collection[ds->recipientCollection], ds, 0); // last argument (printAll) is zero in this ctypes function
+    SuperCollection_reset(ds->collection[ds->recipientCollection]);
 
     finalIdx = SuperConfig_get_index(ds->refConfig2d.positions, ds->collection[!(ds->recipientCollection)]->superConfigs[0]->positionMultipliers, configLength);
     int spIdx = 0;
@@ -412,6 +413,8 @@ void DataSet2d_iterate_stages(SuperCollection * donor, SuperCollection * recipie
 	DataSet2d_solve_equations(recipient);
     if(printAll)
         DataSet2d_print_good_probabilities(recipient, ds);
+    // reset / free SuperEquations here
+	//SuperCollection_reset(recipient);
 	ds->recipientCollection = !(ds->recipientCollection);
 	return;
 }

@@ -110,6 +110,7 @@ void SolverOptions_parse_options(int argc, char ** argv, SolverOptions * opt)
 					if(!success)
 						PERROR("Invalid theta in theta-file.");
 				}
+                fclose(thetain);
 				free(line);
 				break;
 			case 'M':
@@ -143,6 +144,7 @@ void SolverOptions_parse_options(int argc, char ** argv, SolverOptions * opt)
 						PERROR("Invalid migration in migration-file.");
 				}
 				free(line);
+                fclose(migrationin);
 				break;
             case 's':
                 // stdin input
@@ -500,27 +502,6 @@ void solve_D2(FILE * fin, int numThetas, double * thetas, int numMigRates, doubl
 	free(thetas);
 	free(migRates);
 	return;
-}
-
-void test_ctypes(double * test)
-{
-    int i;
-    for(i = 0; i < 3; i++)
-        test[i] = 1.0;
-    return;
-}
-
-void test_ctypes_2(char ** inp, int n)
-{
-    int i;
-
-    for(i = 0; i < n; i++)
-    {
-        char * line = inp[i];
-        printf("%s\n", line);
-    }
-
-    return;
 }
 
 // fills array of sampling probs for original reconfig only (will make another version that fills reconfig probs for all reconfigs)

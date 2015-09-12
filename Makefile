@@ -31,3 +31,6 @@ dll:
 
 dll_debug:
 	gcc -shared -o libsolver.so -fPIC solver.c dataset2d.c datconfig.c dataset.c bmat.c bmat2d.c nodelist.c datconfig2d.c node.c hash.c matrix.c murmur3.c -lm -lumfpack -lamd -lcholmod -lblas -g
+
+dll_csparse:
+	gcc -DCSPARSECOMPILE -shared -o libsolver_csparse.so -fPIC solver.c dataset2d.c datconfig.c dataset.c bmat.c bmat2d.c nodelist.c datconfig2d.c node.c hash.c matrix2.c murmur3.c -lm -O3 -march=native
